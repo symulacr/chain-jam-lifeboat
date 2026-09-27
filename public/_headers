@@ -1,0 +1,17 @@
+# Netlify / Cloudflare Pages response headers for this standalone build.
+#
+# CORS is granted on /game.manifest.json ONLY: the Chain.wtf host page is a
+# different origin and fetches {gameUrl}/game.manifest.json cross-origin before
+# validating it. Everything else (index.html, model.mjs, sdk/guest.mjs,
+# og-image.png) is served without extra headers.
+#
+# DO NOT add `X-Frame-Options: SAMEORIGIN` (or DENY). The jam requires the page
+# to run INSIDE the chain.wtf iframe; X-Frame-Options 1:1 correlates with
+# embeddable:false and would make the entry unembeddable.
+#
+# DO NOT add a catch-all `/*  /index.html  200` rewrite. It would swallow
+# /game.manifest.json and serve text/html where application/json is required,
+# and it would break the sibling .mjs loads.
+/game.manifest.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300

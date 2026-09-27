@@ -1,0 +1,349 @@
+{
+  "slug": "01-lifeboat",
+  "verdict": "PASS",
+  "at": "2026-09-28T00:13:33.588Z",
+  "ops": {
+    "TRUTH_ROUNDS": 2000000,
+    "SAMPLER_ROUNDS": 2000000,
+    "KEY_ROUNDS": 100000
+  },
+  "checks": [
+    {
+      "name": " 1 structure",
+      "status": "PASS",
+      "detail": "5 required files present"
+    },
+    {
+      "name": " 2 syntax",
+      "status": "PASS",
+      "detail": "18 JS files parse"
+    },
+    {
+      "name": " 3 manifest",
+      "status": "PASS",
+      "detail": "valid (gameId=lifeboat, mode=full-iframe)"
+    },
+    {
+      "name": " 4 widget tag",
+      "status": "PASS",
+      "detail": "widget tag present; page loads the verified model"
+    },
+    {
+      "name": " 5 hygiene",
+      "status": "PASS",
+      "detail": "20 shipped files; 1 self-generated image(s); 0 banned strings; 0 third-party binaries"
+    },
+    {
+      "name": " 6 framing",
+      "status": "PASS",
+      "detail": "no framing blocker in any shipped host config"
+    },
+    {
+      "name": " 7 ref param",
+      "status": "INFO",
+      "detail": "does not read the query string — ?ref=chainjam is inherently tolerated"
+    },
+    {
+      "name": " 8 og:image",
+      "status": "INFO",
+      "detail": "og:image present: og-image.png"
+    },
+    {
+      "name": " 9 model loads",
+      "status": "PASS",
+      "detail": "SLUG=lifeboat, declared 9574 bps"
+    },
+    {
+      "name": "10 paytable",
+      "status": "PASS",
+      "detail": "4 bands, 0..20, monotonic, boundaries exact"
+    },
+    {
+      "name": "11 rtp truth",
+      "status": "PASS",
+      "detail": "9586 bps measured vs 9574 declared (CI +/-26, allowed +/-53 bps), stat 0..16"
+    },
+    {
+      "name": "12 rtp sampler",
+      "status": "PASS",
+      "detail": "9571 bps via makeRng vs 9573 bps independent CSPRNG (diff 1 bps, allowed 75)"
+    },
+    {
+      "name": "13 key space",
+      "status": "PASS",
+      "detail": "700,000 round indices across 7 magnitude windows, 0 collisions"
+    },
+    {
+      "name": "14 weight",
+      "status": "INFO",
+      "detail": "52 files; page 109,290 B raw / 35,799 B gzip"
+    }
+  ],
+  "weight": {
+    "files": 52,
+    "rawPage": 109290,
+    "gzPage": 35799,
+    "rows": [
+      {
+        "f": ".gitignore",
+        "raw": 239,
+        "gz": 197
+      },
+      {
+        "f": "LICENSE",
+        "raw": 1078,
+        "gz": 659
+      },
+      {
+        "f": "README.md",
+        "raw": 7659,
+        "gz": 3784
+      },
+      {
+        "f": "contracts/ICasinoGameV2.sol",
+        "raw": 2242,
+        "gz": 951
+      },
+      {
+        "f": "contracts/LifeboatGame.sol",
+        "raw": 9953,
+        "gz": 3536
+      },
+      {
+        "f": "dist/_headers",
+        "raw": 855,
+        "gz": 526
+      },
+      {
+        "f": "dist/game/model.mjs",
+        "raw": 10070,
+        "gz": 4065
+      },
+      {
+        "f": "dist/game.manifest.json",
+        "raw": 747,
+        "gz": 408
+      },
+      {
+        "f": "dist/index.html",
+        "raw": 3925,
+        "gz": 1598
+      },
+      {
+        "f": "dist/og-image.png",
+        "raw": 15355,
+        "gz": 8960
+      },
+      {
+        "f": "dist/src/app.js",
+        "raw": 19330,
+        "gz": 6635
+      },
+      {
+        "f": "dist/src/sdk/guest.mjs",
+        "raw": 26836,
+        "gz": 6281
+      },
+      {
+        "f": "dist/src/selection.mjs",
+        "raw": 4178,
+        "gz": 1913
+      },
+      {
+        "f": "dist/src/styles.css",
+        "raw": 6579,
+        "gz": 2638
+      },
+      {
+        "f": "dist/vercel.json",
+        "raw": 232,
+        "gz": 169
+      },
+      {
+        "f": "docs/adversarial.md",
+        "raw": 21886,
+        "gz": 9391
+      },
+      {
+        "f": "docs/architecture.md",
+        "raw": 7954,
+        "gz": 3454
+      },
+      {
+        "f": "docs/chain-integration.md",
+        "raw": 8040,
+        "gz": 3797
+      },
+      {
+        "f": "docs/chain-proof.json",
+        "raw": 2531,
+        "gz": 1057
+      },
+      {
+        "f": "docs/host-embed.json",
+        "raw": 1230,
+        "gz": 589
+      },
+      {
+        "f": "docs/iframe.md",
+        "raw": 4631,
+        "gz": 2369
+      },
+      {
+        "f": "docs/rtp-proof.md",
+        "raw": 7278,
+        "gz": 3452
+      },
+      {
+        "f": "docs/rtp.md",
+        "raw": 4767,
+        "gz": 2438
+      },
+      {
+        "f": "docs/security.md",
+        "raw": 8716,
+        "gz": 4026
+      },
+      {
+        "f": "docs/standalone.md",
+        "raw": 4512,
+        "gz": 2090
+      },
+      {
+        "f": "docs/testnet.md",
+        "raw": 3883,
+        "gz": 1727
+      },
+      {
+        "f": "docs/verification.json",
+        "raw": 6947,
+        "gz": 1608
+      },
+      {
+        "f": "docs/verification.txt",
+        "raw": 54028,
+        "gz": 16532
+      },
+      {
+        "f": "docs/vrf.md",
+        "raw": 5363,
+        "gz": 2632
+      },
+      {
+        "f": "game/README.md",
+        "raw": 4123,
+        "gz": 2078
+      },
+      {
+        "f": "game/model.mjs",
+        "raw": 10070,
+        "gz": 4065
+      },
+      {
+        "f": "index.html",
+        "raw": 3925,
+        "gz": 1598
+      },
+      {
+        "f": "package.json",
+        "raw": 553,
+        "gz": 302
+      },
+      {
+        "f": "public/_headers",
+        "raw": 855,
+        "gz": 526
+      },
+      {
+        "f": "public/game.manifest.json",
+        "raw": 747,
+        "gz": 408
+      },
+      {
+        "f": "public/og-image.png",
+        "raw": 15355,
+        "gz": 8960
+      },
+      {
+        "f": "public/vercel.json",
+        "raw": 232,
+        "gz": 169
+      },
+      {
+        "f": "scripts/build.mjs",
+        "raw": 2774,
+        "gz": 1142
+      },
+      {
+        "f": "scripts/check.mjs",
+        "raw": 1231,
+        "gz": 688
+      },
+      {
+        "f": "scripts/serve.mjs",
+        "raw": 2109,
+        "gz": 979
+      },
+      {
+        "f": "src/app.js",
+        "raw": 19330,
+        "gz": 6635
+      },
+      {
+        "f": "src/sdk/guest.mjs",
+        "raw": 26836,
+        "gz": 6281
+      },
+      {
+        "f": "src/selection.mjs",
+        "raw": 4178,
+        "gz": 1913
+      },
+      {
+        "f": "src/styles.css",
+        "raw": 6579,
+        "gz": 2638
+      },
+      {
+        "f": "tests/contract.test.mjs",
+        "raw": 12098,
+        "gz": 4077
+      },
+      {
+        "f": "tests/evm.test.mjs",
+        "raw": 10411,
+        "gz": 4030
+      },
+      {
+        "f": "tests/model.test.mjs",
+        "raw": 7476,
+        "gz": 2822
+      },
+      {
+        "f": "tests/selection.test.mjs",
+        "raw": 8558,
+        "gz": 2679
+      },
+      {
+        "f": "tests/ui.test.mjs",
+        "raw": 9639,
+        "gz": 3624
+      },
+      {
+        "f": "tools/browser-report.json",
+        "raw": 4736,
+        "gz": 1543
+      },
+      {
+        "f": "tools/browser-verify.mjs",
+        "raw": 18200,
+        "gz": 6854
+      },
+      {
+        "f": "tools/tune.mjs",
+        "raw": 4693,
+        "gz": 2041
+      }
+    ]
+  }
+}

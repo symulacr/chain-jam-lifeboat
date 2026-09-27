@@ -1,0 +1,961 @@
+# verification.txt — LIFEBOAT (top3/01-lifeboat)
+
+Date: 2026-09-27. Phase: FINAL BUILD-COMPLETION, Wave 2A.
+Every block below is pasted verbatim from a captured command; nothing is paraphrased. The
+per-check JSON artefact `docs/verification.json` is written by the shared harness in this same run.
+
+Host: WSL2 Ubuntu-24.04, node v26.10.0, solc 0.8.34+commit.80d5c536.Linux.g++.
+Browser: /home/eya/.agent-browser/browsers/chrome-154.0.8037.57/chrome (headless, CDP).
+Ports used: 8901 (static server) and 9412 (CDP). No chain was touched; no port owned by another
+session was bound.
+
+================================================================================
+1. IDENTITY — the model and the bridge are byte-identical to the verified sources
+================================================================================
+
+$ sha256sum jam-candidates/lifeboat/model.mjs top3/01-lifeboat/game/model.mjs
+4c87c7466d0d337b1dae41e5d3054ff686f41eda8cde1bba15faa6e5cedb3925  jam-candidates/lifeboat/model.mjs
+4c87c7466d0d337b1dae41e5d3054ff686f41eda8cde1bba15faa6e5cedb3925  top3/01-lifeboat/game/model.mjs
+$ cmp jam-candidates/lifeboat/model.mjs top3/01-lifeboat/game/model.mjs
+model.mjs: IDENTICAL (cmp exit 0)
+
+(Post-Wave-4 correction, 2026-09-27 — the `makeRng` doc comment was corrected IDENTICALLY in both
+copies: the old text claimed "round indices up to 2^52 (and beyond) never collide", which is not
+proven. The edit is comment-only — no code line changed, behaviour is byte-for-byte identical, and
+the two copies remain byte-identical, as the equal sha256 above shows.)
+
+$ sha256sum jam-candidates/shared/guest.mjs top3/01-lifeboat/src/sdk/guest.mjs
+46263af16ea64b0e1f3e118764f82e463cd58ef1925a7b3a6af33baa121e75fe  jam-candidates/shared/guest.mjs
+46263af16ea64b0e1f3e118764f82e463cd58ef1925a7b3a6af33baa121e75fe  top3/01-lifeboat/src/sdk/guest.mjs
+$ cmp jam-candidates/shared/guest.mjs top3/01-lifeboat/src/sdk/guest.mjs
+guest.mjs: IDENTICAL (cmp exit 0)
+
+guest.mjs sha256 equals the required
+46263af16ea64b0e1f3e118764f82e463cd58ef1925a7b3a6af33baa121e75fe.
+
+The split was checked at the source level against the verified index.html:
+  SCRIPT: IDENTICAL   (the <script type="module"> body, except `./model.mjs` -> `../game/model.mjs`)
+  BODY HTML: IDENTICAL
+  CSS (body, header comment stripped): SEMANTICALLY IDENTICAL   (the inline <style> differs only
+                                                 by its 2-space indentation inside the tag)
+
+styles.css contains no `url(...)` asset reference and no @import; index.html loads exactly two
+scripts: the literal widget tag and ./src/app.js. `node --check` covers every .js/.mjs.
+
+================================================================================
+2. THE THREE npm SCRIPTS (verbatim)
+================================================================================
+
+$ npm run build
+
+> lifeboat@1.0.0 build
+> node scripts/build.mjs
+
+built dist/ — 9 files
+      855 B  _headers
+     9834 B  game/model.mjs
+      747 B  game.manifest.json
+     3473 B  index.html
+    15355 B  og-image.png
+    11228 B  src/app.js
+    26836 B  src/sdk/guest.mjs
+     4453 B  src/styles.css
+      444 B  vercel.json
+
+dist total : 73,225 B raw / 27,517 B gzip
+dist page  : 55,824 B raw / 17,327 B gzip (html+css+js+mjs)
+
+$ npm test
+
+> lifeboat@1.0.0 test
+> node tests/model.test.mjs && node tests/contract.test.mjs
+
+lifeboat model tests
+  ok   BANDS tile 0..MAX_STAT with no gap or overlap
+  ok   multipliers are monotonic non-decreasing
+  ok   bandOf boundaries: 5->0, 6->1.2, 7->1.2, 8->2, 12->2, 13->16, 20->16
+  ok   rule masks decode to the labels they claim
+  ok   the row-table step matches a naive independent automaton
+  ok   census over GENERATIONS also matches the naive automaton
+  ok   worked examples, rule 0 (B25/S014)
+  ok   a fully-lit deck dies under every rule inside 14 generations
+  ok   the same deck really does evolve differently under each rule
+  ok   outcome uses the default rule; outcomeWithRule is explicit
+  ok   evolution returns GENERATIONS+1 frames and lands on the census
+  ok   every rule RTP lands in [9300,9800] and the declaration is the floor
+  ok   makeRng returns 32-byte hex and is deterministic
+  ok   makeRng does not collide at high round indices
+
+14 passed
+lifeboat contract tests
+  ok   declares MIT SPDX, matching LICENSE
+  ok   declares a constant, no constructor, implements ICasinoGameV2
+  ok   implements all six ICasinoGameV2 members
+  ok   all step handlers are pure (no reentrancy surface)
+  ok   carries the declared constants
+  ok   carries the three B/S masks
+  ok   paytable boundaries are the model bands
+  ok   the locked rule is committed to gameState and read back from it
+  ok   randomness is requested once, on the pre-word step
+  ok   the reserve is committed at start and never released at settle
+  ok   the word folds exactly as the model folds it
+  ok   onPlayerAction reverts honestly (submitAction:false)
+  ok   contract masks decode to the model rules
+  ok   contract paytable bps equals model bands x 10000
+  ok   contract _step matches model step on sampled boards, every rule
+  ok   contract _census matches model census on sampled boards, every rule
+  ok   contract _fold20 matches model wordTo20, and agrees on the census path
+  ok   full-word inputs (all four lanes) agree
+  ok   the payout cap equals the top band exactly (no slack, no overflow)
+  ok   quoteRiskParams quotes non-zero body variance for a non-heavy-tail game
+
+20 passed
+
+$ npm run check
+
+> lifeboat@1.0.0 check
+> node scripts/check.mjs
+
+  ok   game/model.mjs
+  ok   scripts/build.mjs
+  ok   scripts/check.mjs
+  ok   scripts/serve.mjs
+  ok   src/app.js
+  ok   src/sdk/guest.mjs
+  ok   tests/contract.test.mjs
+  ok   tests/model.test.mjs
+  ok   tools/browser-verify.mjs
+  ok   tools/tune.mjs
+
+10/10 JS files parse
+
+================================================================================
+3. SHARED HARNESS — verify-candidate.mjs (verbatim)
+================================================================================
+
+$ node jam-candidates/tools/verify-candidate.mjs top3/01-lifeboat
+
+==============================================================================
+01-lifeboat
+==============================================================================
+  [PASS]  1 structure     5 required files present
+  [PASS]  2 syntax        13 JS files parse
+  [PASS]  3 manifest      valid (gameId=lifeboat, mode=full-iframe)
+  [PASS]  4 widget tag    widget tag present; page loads the verified model
+  [PASS]  5 hygiene       19 shipped files; 1 self-generated image(s); 0 banned strings; 0 third-party binaries
+  [PASS]  6 framing       no framing blocker in any shipped host config
+  [INFO]  7 ref param     does not read the query string — ?ref=chainjam is inherently tolerated
+  [INFO]  8 og:image      og:image present: og-image.png
+  [PASS]  9 model loads   SLUG=lifeboat, declared 9574 bps
+  [PASS] 10 paytable      4 bands, 0..20, monotonic, boundaries exact
+  [PASS] 11 rtp truth     9575 bps measured vs 9574 declared (CI +/-26, allowed +/-53 bps), stat 0..16
+  [PASS] 12 rtp sampler   9590 bps via makeRng vs 9580 bps independent CSPRNG (diff 10 bps, allowed 75)
+  [PASS] 13 key space     700,000 round indices across 7 magnitude windows, 0 collisions
+  [INFO] 14 weight        44 files; page 95,306 B raw / 29,423 B gzip
+  => PASS
+
+==============================================================================
+SUMMARY
+==============================================================================
+  PASS  top3/01-lifeboat
+
+1/1 candidates PASS
+EXIT=0
+
+(Checks 11 and 12 are a coarse CSPRNG consistency check, not the authoritative figure; the exact
+enumerations in section 4 are. The two INFO lines are informational by design: the page never reads
+the query string, and the og:image resolves because the harness accepts `public/` for the top3
+layout (the build copies public/* to the dist root). Weight counts source + dist trees.)
+
+================================================================================
+4. EXACT RTP — my model re-enumerated, and the independent brute-force tool
+================================================================================
+
+(a) `node tools/tune.mjs` run inside this project (reads MY game/model.mjs):
+
+--- summary ---
+  B25/S014   rule 0  exact 9574.2035 bps  (9574)
+  B25/S23    rule 1  exact 9575.7103 bps  (9576)
+  B24/S23    rule 2  exact 9594.7456 bps  (9595)
+  spread across rules: 20.5421 bps
+  lowest rule: B25/S014 (rule 0)
+  model.mjs declares EXPECTED_RTP_BPS = 9574
+  declared matches the default rule's exact value: YES
+  in jam window [9300,9800]: YES (all three)
+  declared is the floor across all choices: YES
+
+--- risk constants for LifeboatGame.sol (exact, per rule, same histograms) ---
+  rule 0 B25/S014  TOP_TIER_PROB_WAD = 12245178222656250  BODY_VAR_SCALED = 1327996826171875000  RTP_BPS = 9574
+  rule 1 B25/S23   TOP_TIER_PROB_WAD = 10375976562500000  BODY_VAR_SCALED = 1447100067138671875  RTP_BPS = 9576
+  rule 2 B24/S23   TOP_TIER_PROB_WAD = 6427764892578125  BODY_VAR_SCALED = 1662549591064453125  RTP_BPS = 9595
+  MAX_MULT_BPS = 160000 (16x) — rule independent
+  EXPECTED_RTP_BPS (declared, = rule 0, the floor) = 9574
+
+word->board->census spot check: 256 words, 0 mismatches
+generations K = 14; bands: 0-5@0  6-7@1.2  8-12@2  13-20@16
+
+(b) shared `jam-candidates/tools/verify-exact-rtp.mjs` (brute-forces the space; never calls the
+    candidate's enumeration). lifeboat lines:
+
+[ -- ] lifeboat      20-bit fold, lane 0        declared  9574  measured     0.0000  over    1,048,576 states  lane 0 (outside the fold)
+[ -- ] lifeboat      20-bit fold, lane 1        declared  9574  measured     0.0000  over    1,048,576 states  lane 1 (outside the fold)
+[ -- ] lifeboat      20-bit fold, lane 2        declared  9574  measured     0.0000  over    1,048,576 states  lane 2 (outside the fold)
+[ -- ] lifeboat      20-bit fold, lane 3        declared  9574  measured     0.0000  over    1,048,576 states  lane 3 (outside the fold)
+[  ok ] lifeboat      20-bit fold, lane 4        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] lifeboat      20-bit fold, lane 5        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] lifeboat      20-bit fold, lane 6        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] lifeboat      20-bit fold, lane 7        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] lifeboat      fold uniformity            4 independent lanes reproduce the declared RTP
+
+exact re-derivations performed: 15, failed: 0
+EXIT=0
+
+The lanes labelled "20-bit fold, lane 4..7" are the ones this game reads (it reads the low 16
+bytes, so the window has to sit in those lanes to vary); lanes 0..3 in this tool's bit-offset
+convention address bytes the fold does not read, so they enumerate a constant. Four independent
+lanes reproduce 9574.2035 exactly, which is the point of the check.
+
+CONCLUSION: my game/model.mjs is behaviourally unchanged from the verified original — it is
+byte-identical (cmp exit 0), it re-derives the same exact per-rule RTPs from its own enumeration,
+and the independent brute-force tool reproduces the declared figure over the full 2^20 space.
+
+================================================================================
+5. BROWSER RUN OF THE BUILT dist/ (verbatim) — headless Chrome via CDP
+================================================================================
+
+Server: `npm run serve` (dist/) on http://127.0.0.1:8901/
+Driver: `BASE_URL=http://127.0.0.1:8901/ node tools/browser-verify.mjs`
+The harness patches crypto.getRandomValues before load so the exact dealt words are known, then
+compares each rendered census against game/model.mjs for that word. It clicks the rule chip, then
+DEMO twice.
+
+$ BASE_URL=http://127.0.0.1:8901/ node tools/browser-verify.mjs
+
+LIFEBOAT browser check — http://127.0.0.1:8901/
+  [PASS] page renders 20 berths — berths=20
+  [PASS] deck has 4 rows — rows=4
+  [PASS] three rule chips render — 0:on 1:- 2:-
+  [PASS] paytable has 4 rows — rows=4
+  [PASS] model library is exposed — window.__lifeboat is object
+  [PASS] boot round settled — gen=14 headline="Census: 14 live berths under B25/S014. Paid 16x."
+  [PASS] boot census equals game/model.mjs for the dealt word — word=0x000000fb0000000000… model=14 rendered=14
+  [PASS] lit berths equal the rendered census — live=14 pop=14
+  [PASS] notice names the standalone demo — "No host answered — standalone demo. Pick a rule, then press DEMO."
+  [PASS] winning round names the payout — headline="Census: 14 live berths under B25/S014. Paid 16x."
+  [PASS] paytable highlights the 13+ band — on=["13+16x"]
+  [PASS] no undefined/NaN in the settled text — LIFEBOAT — 20-BERTH CENSUS _ □ ✕ Deck Census Help gen 14 / 14 — the census is counted on t
+  [PASS] clicking a rule chip selects exactly that chip — clicked="B24/S23 — one easier birth — booms then collap" on=2
+  [PASS] chip click announces the lock — "Rule B24/S23 will be locked when the round starts."
+  [PASS] DEMO deals (a new word was drawn) — words 1 -> 2
+  [PASS] round RESOLVES (gen 14, headline names the census) — gen=14 headline="Census: 8 live berths under B24/S23. Paid 2x."
+  [PASS] rule 2 census equals game/model.mjs for the dealt word — word=0x000000030000000000… model=8 rendered=8
+  [PASS] lit berths equal the rendered census — live=8 pop=8
+  [PASS] locked rule is shown — k-rule=B24/S23
+  [PASS] result is readable (win named) — headline="Census: 8 live berths under B24/S23. Paid 2x."
+  [PASS] paytable highlights the 8-12 band — on=["8–122x"]
+  [PASS] no undefined/NaN in the settled text — LIFEBOAT — 20-BERTH CENSUS _ □ ✕ Deck Census Help gen 14 / 14 — the census is counted on t
+  [PASS] clicking again re-deals (gen left 14 and a new word was drawn) — words 2 -> 3
+  [PASS] the new round is a different word — 0x000000030000… vs 0x000000050000…
+  [PASS] the new round RESOLVES and matches the model — gen=14 model=8 rendered=8 headline="Census: 8 live berths under B24/S23. Paid 2x."
+  [PASS] all assets serve 200 — {"/":200,"src/styles.css":200,"src/app.js":200,"game/model.mjs":200,"src/sdk/guest.mjs":200,"og-image.png":200,"game.manifest.json":200}
+
+  settled round 1 (boot, rule 0): {"word":"0x000000fb00000000000000000000000000000000000000000000000000000000","census":"14","mult":"16x","headline":"Census: 14 live berths under B25/S014. Paid 16x."}
+  settled round 2 (DEMO, rule 2): {"word":"0x0000000300000000000000000000000000000000000000000000000000000000","census":"8","mult":"2x","headline":"Census: 8 live berths under B24/S23. Paid 2x."}
+  settled round 3 (DEMO again):   {"word":"0x0000000500000000000000000000000000000000000000000000000000000000","census":"8","mult":"2x","headline":"Census: 8 live berths under B24/S23. Paid 2x."}
+
+======================================================================
+26/26 assertions passed
+report: /home/eya/wtfjam/top3/01-lifeboat/tools/browser-report.json
+
+A first run of the same harness (deterministic pseudo-random words) also passed 23/23, with all
+three rounds landing as losses (census 1, 4, 0) — that run is superseded by the forced-win run
+above, which additionally exercises the "Paid Nx." text and the paytable highlight.
+
+================================================================================
+6. CONTRACT COMPILE (no chain; compile only) and dist size
+================================================================================
+
+$ sed -n '1,1p' <(solc --version | tail -1)
+Version: 0.8.34+commit.80d5c536.Linux.g++
+$ cd contracts && solc --overwrite --optimize --bin LifeboatGame.sol -o /tmp/lb-out
+Compiler run successful. Artifact(s) can be found in directory "/tmp/lb-out".
+$ python3 -c "print('bytes:', len(open('/tmp/lb-out/LifeboatGame.bin').read().strip())//2)"
+bytes: 2859
+
+(2859 bytes matches the figure recorded for the verified candidate. The verified report named
+solc 0.8.36; the compiler present here is 0.8.34 — same compiler family, `--optimize`, successful,
+no warnings. In Wave 2 this was compile-only: "not deployed; no chain transaction was run". That is
+superseded — Wave 3 (§8.4 below) deployed this contract and settled 20 real rounds on the local
+simulator.)
+
+dist/ raw+gzip (from `npm run build`, section 2):
+  dist total : 73,225 B raw / 27,517 B gzip   (9 files incl. og-image.png)
+  dist page  : 55,824 B raw / 17,327 B gzip   (index.html + styles.css + app.js + model.mjs + guest.mjs)
+
+================================================================================
+7. WHAT IS UNPROVEN — Wave-2 assessment, per-bullet status corrected in Wave 3
+================================================================================
+
+- No on-chain execution in this phase. The contract compiles and is model-parity-checked
+  (tests/contract.test.mjs transliterates the contract's own masks/automaton/paytable and matches
+  the model), but the compiled EVM bytecode has not been run against the model here. Deferred to
+  the chain phase; production-chain deployment is EXTERNAL BLOCKED (docs/testnet.md).
+  → CORRECTED (Wave 3): PASS on the local simulator. 20 real settled rounds (21 sessions) on
+    chain id 31337, 0 stuck, 0 parity failures, one real VRF fulfilment tx per session; the
+    compiled bytecode WAS run against the model — every settled payout was re-derived from the
+    chain-emitted randomness and matched. Production-chain deployment remains EXTERNAL BLOCKED.
+    Evidence: §8 below; docs/chain-proof.json.
+- No live host-embed settlement observed (no host existed to answer). The page falls through to
+  the standalone demo by design; the embed path is written to the documented lifecycle.
+  → CORRECTED (Wave 3): PASS. The SDK production-faithful host harness mounted the guest in the
+    iframe, the wager was placed THROUGH the host bridge, the chain session count moved 20 → 21,
+    and the guest rendered the settled result. Evidence: §8 below; docs/host-embed.json.
+- ctx.gameState round-tripping (the "rule locked before the word" argument) is assumed from
+  documented host behaviour, not observed.
+  → PARTIALLY CORRECTED (Wave 3): the round-trip ran on the local simulator and settlement
+    succeeded reading the rule back from ctx.gameState — but every probe round opened with
+    gameData `0x` (the default rule), and `_ruleFrom('')` also returns 0
+    (contracts/LifeboatGame.sol:60-65), so a failed round-trip of a NON-default rule is still
+    indistinguishable. Non-default-rule read-back and production-host persistence remain UNPROVEN.
+- The browser run is localhost only; no public host serves this page.
+  → CORRECTED (Wave 3): PASS. Public HTTPS URL https://chain-jam-lifeboat.vercel.app serves the
+    build (all assets 200; manifest CORS `*`), and it was driven standalone in a real headless
+    browser with no host attached — the round resolved and the result rendered, no cold-load hang.
+    Evidence: §8 below; research/public-deploy-top3.md; docs/standalone.md.
+- solcjs specifically was not run (the svm/solc driver was); no K-sensitivity sweep for
+  GENERATIONS = 14 is included.
+  → STILL UNPROVEN.
+
+================================================================================
+8. WAVE 3 — REAL CHAIN + HOST EMBED + PUBLIC HTTPS (2026-09-27)
+================================================================================
+
+Wave 3 is evidence capture only: no source was re-engineered for it. The build, tests and shared
+harness were re-run to confirm the shipped tree is still green, then the real-chain, host-embed and
+public-HTTPS results (captured 2026-09-27) were folded in. Every command block below is pasted
+verbatim. Environment for this run: WSL2 Ubuntu-24.04, node v26.10.0. No local chain was started or
+stopped for this section; `git` was not run; no port owned by another session was bound.
+
+--------------------------------------------------------------------------------
+8.1  $ npm run build && npm test && npm run check          (rerun 2026-09-27)
+--------------------------------------------------------------------------------
+
+$ npm run build
+
+> lifeboat@1.0.0 build
+> node scripts/build.mjs
+
+built dist/ — 9 files
+      855 B  _headers
+     9834 B  game/model.mjs
+      747 B  game.manifest.json
+     3473 B  index.html
+    15355 B  og-image.png
+    11228 B  src/app.js
+    26836 B  src/sdk/guest.mjs
+     4453 B  src/styles.css
+      232 B  vercel.json
+
+dist total : 73,013 B raw / 27,390 B gzip
+dist page  : 55,824 B raw / 17,327 B gzip (html+css+js+mjs)
+
+(vercel.json is now 232 B, down from 444 B: the invalid `$comment` key was removed — see §8.6.)
+
+$ npm test
+
+> lifeboat@1.0.0 test
+> node tests/model.test.mjs && node tests/contract.test.mjs
+
+lifeboat model tests
+  ok   BANDS tile 0..MAX_STAT with no gap or overlap
+  ok   multipliers are monotonic non-decreasing
+  ok   bandOf boundaries: 5->0, 6->1.2, 7->1.2, 8->2, 12->2, 13->16, 20->16
+  ok   rule masks decode to the labels they claim
+  ok   the row-table step matches a naive independent automaton
+  ok   census over GENERATIONS also matches the naive automaton
+  ok   worked examples, rule 0 (B25/S014)
+  ok   a fully-lit deck dies under every rule inside 14 generations
+  ok   the same deck really does evolve differently under each rule
+  ok   outcome uses the default rule; outcomeWithRule is explicit
+  ok   evolution returns GENERATIONS+1 frames and lands on the census
+  ok   every rule RTP lands in [9300,9800] and the declaration is the floor
+  ok   makeRng returns 32-byte hex and is deterministic
+  ok   makeRng does not collide at high round indices
+
+14 passed
+lifeboat contract tests
+  ok   declares MIT SPDX, matching LICENSE
+  ok   declares a constant, no constructor, implements ICasinoGameV2
+  ok   implements all six ICasinoGameV2 members
+  ok   all step handlers are pure (no reentrancy surface)
+  ok   carries the declared constants
+  ok   carries the three B/S masks
+  ok   paytable boundaries are the model bands
+  ok   the locked rule is committed to gameState and read back from it
+  ok   randomness is requested once, on the pre-word step
+  ok   the reserve is committed at start and never released at settle
+  ok   the word folds exactly as the model folds it
+  ok   onPlayerAction reverts honestly (submitAction:false)
+  ok   contract masks decode to the model rules
+  ok   contract paytable bps equals model bands x 10000
+  ok   contract _step matches model step on sampled boards, every rule
+  ok   contract _census matches model census on sampled boards, every rule
+  ok   contract _fold20 matches model wordTo20, and agrees on the census path
+  ok   full-word inputs (all four lanes) agree
+  ok   the payout cap equals the top band exactly (no slack, no overflow)
+  ok   quoteRiskParams quotes non-zero body variance for a non-heavy-tail game
+
+20 passed
+
+$ npm run check
+
+> lifeboat@1.0.0 check
+> node scripts/check.mjs
+
+  ok   game/model.mjs
+  ok   scripts/build.mjs
+  ok   scripts/check.mjs
+  ok   scripts/serve.mjs
+  ok   src/app.js
+  ok   src/sdk/guest.mjs
+  ok   tests/contract.test.mjs
+  ok   tests/model.test.mjs
+  ok   tools/browser-verify.mjs
+  ok   tools/tune.mjs
+
+10/10 JS files parse
+
+RESULT: build green; model tests 14/14; contract tests 20/20; node --check 10/10.
+
+--------------------------------------------------------------------------------
+8.2  $ node jam-candidates/tools/verify-candidate.mjs top3/01-lifeboat    (rerun)
+--------------------------------------------------------------------------------
+
+==============================================================================
+01-lifeboat
+==============================================================================
+  [PASS]  1 structure     5 required files present
+  [PASS]  2 syntax        13 JS files parse
+  [PASS]  3 manifest      valid (gameId=lifeboat, mode=full-iframe)
+  [PASS]  4 widget tag    widget tag present; page loads the verified model
+  [PASS]  5 hygiene       19 shipped files; 1 self-generated image(s); 0 banned strings; 0 third-party binaries
+  [PASS]  6 framing       no framing blocker in any shipped host config
+  [INFO]  7 ref param     does not read the query string — ?ref=chainjam is inherently tolerated
+  [INFO]  8 og:image      og:image present: og-image.png
+  [PASS]  9 model loads   SLUG=lifeboat, declared 9574 bps
+  [PASS] 10 paytable      4 bands, 0..20, monotonic, boundaries exact
+  [PASS] 11 rtp truth     9558 bps measured vs 9574 declared (CI +/-26, allowed +/-53 bps), stat 0..16
+  [PASS] 12 rtp sampler   9563 bps via makeRng vs 9580 bps independent CSPRNG (diff 17 bps, allowed 75)
+  [PASS] 13 key space     700,000 round indices across 7 magnitude windows, 0 collisions
+  [INFO] 14 weight        45 files; page 95,306 B raw / 29,423 B gzip
+  => PASS
+
+==============================================================================
+SUMMARY
+==============================================================================
+  PASS  top3/01-lifeboat
+
+1/1 candidates PASS
+
+(The exact-RTP check 11 here is a 2M-round Monte-Carlo consistency check, so its measured figure
+moves run to run around 9574; the authoritative exact figure is the full 2^20 enumeration in §4 and
+§8.3. Check 14 counts 45 files here vs 44 in §3 because this run now also counts docs/chain-proof.json.)
+
+--------------------------------------------------------------------------------
+8.3  $ node jam-candidates/tools/verify-exact-rtp.mjs top3/01-lifeboat     (rerun)
+--------------------------------------------------------------------------------
+
+== independent exact-RTP verification (brute force, not the candidate's own enumeration) ==
+
+candidate     check                      declared        measured            states  note
+------------------------------------------------------------------------------------------------------------------------------------
+[ -- ] 01-lifeboat   20-bit fold, lane 0        declared  9574  measured     0.0000  over    1,048,576 states  lane 0 (outside the fold)
+[ -- ] 01-lifeboat   20-bit fold, lane 1        declared  9574  measured     0.0000  over    1,048,576 states  lane 1 (outside the fold)
+[ -- ] 01-lifeboat   20-bit fold, lane 2        declared  9574  measured     0.0000  over    1,048,576 states  lane 2 (outside the fold)
+[ -- ] 01-lifeboat   20-bit fold, lane 3        declared  9574  measured     0.0000  over    1,048,576 states  lane 3 (outside the fold)
+[  ok ] 01-lifeboat   20-bit fold, lane 4        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] 01-lifeboat   20-bit fold, lane 5        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] 01-lifeboat   20-bit fold, lane 6        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] 01-lifeboat   20-bit fold, lane 7        declared  9574  measured  9574.2035  over    1,048,576 states  EXACT, 15 distinct stats
+[  ok ] 01-lifeboat   fold uniformity            4 independent lanes reproduce the declared RTP
+
+== flood-exe: NOT enumerable (keccak over the full 256-bit word) ==
+   Deferred to verify-candidate.mjs (2M-round CSPRNG + 2M-round sampler). Its 94.717% was
+   cross-checked three ways in Wave 3/4 (10M script, 200M independent, CSPRNG) and by 2,670+
+   live settled rounds. This is the only Monte Carlo RTP in the set.
+
+exact re-derivations performed: 5, failed: 0
+
+EXACT re-derivation: declared 9574 bps reproduced as 9574.2035 on all four lanes that this game
+actually reads (bytes 0..15), 4 independent lanes, 0 failures. (This single-candidate invocation
+reports "5" re-derivations; the earlier §4(b) figure of 15 covered all three candidates at once.)
+
+--------------------------------------------------------------------------------
+8.4  REAL CHAIN — deployed and settled on the local simulator (chain id 31337)
+--------------------------------------------------------------------------------
+
+Source: research/chain-evidence.json (per-game deployment record) and docs/chain-proof.json (the
+20-round settlement proof; byte-identical to the `lifeboat` slice of
+jam-candidates/tools/chain-proof-all.json — verified with a JSON deep-compare, `true`).
+
+Deployment:
+  chain id            : 31337
+  casino host         : 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
+  casino vault        : 0xCafac3dD18aC6c6e92c921884f9E4176737C052c
+  VRF router          : 0x057ef64e23666f000b34ae31332854acbd1c8544
+  LifeboatGame        : 0xa513e6e4b8f2a923d98304ec87f64353c4d5c853
+  deploy tx           : 0xd238c250a415707933b30b9ce4922c63972a8bc0f2cd800e5de762bf2e07a6e1
+  deploy block        : 19
+  deploy gasUsed      : 566101
+  sessionsSettled     : 21
+  uniqueVrfFulfilmentTxs : 21
+  firstSessionId      : 1
+
+Settlement proof (docs/chain-proof.json):
+  rounds              : 20
+  stuck               : 0
+  parityFails         : 0
+  tiers               : {"0x":12,"2x":4,"1.2x":4}
+  realised RTP (20-round sample) : 64 %
+  declared RTP        : 9574 bps
+  VRF fulfilment txs (first 3)   : 0x7ea1def1…, 0xcd565594…, 0xc4ab45d8…
+  request ids (first 3)          : 0xec409d41…, 0xef52d5b6…, 0x81117bea…
+  first 3 rounds (session/block/settleTx):
+    1 / 1  / block 27 / 0xc69bc61f5985404a867c80f268243f3bb857623b430bc37d3a19558ddfa5deba
+    2 / 2  / block 29 / 0xe2b121a4ecf17009747d33639b817b5c28d75d0514a7a2c00bd364ec4d733977
+    3 / 3  / block 31 / 0x2a2bc4ab11f01c414f258ff064dcdbb274133f08ff8d767fd95e3a277f09cac8
+
+Max-payout path (eth-call of onRandomness with a top-band word; no funds move) — topPath:
+  word (offline-found) : 0x9fff7a9928c501e4f9a0157bc643c6248d307591da20683610184244fa8ab804
+  stat                 : 14
+  mult                 : 16x
+  payoutWei            : 16000000000000000000   (16 x wager, i.e. 16.0 chUSD)
+  nextPhase            : 3 (SETTLED)
+  capWei               : 16000000000000000000
+  withinCap            : true
+
+So the max payout equals the cap exactly (escrow + reserve = 16·w), and the settling step returns
+within it — the "no slack, no overflow" identity of §6 and docs/chain-integration.md holds on a
+real settled call, not just in tests.
+
+TRANSPARENCY (limits of the chain claim):
+  - Every probe round opened with gameData `0x`, i.e. the DEFAULT rule (rule 0); the probe therefore
+    does not distinctly exercise the read-back of a NON-default rule from ctx.gameState (see the
+    PARTIALLY CORRECTED bullet in §7).
+  - The 20-round sample is small (realised RTP 64% is a small-sample figure, not the RTP; the exact
+    9574 bps is in §8.3).
+  - This is the local simulator (LocalCasinoHost/LocalCasinoVault), NOT the production Chain.wtf
+    host; production-chain deployment remains EXTERNAL BLOCKED (docs/testnet.md).
+
+--------------------------------------------------------------------------------
+8.5  HOST EMBED — guest mounted in the SDK harness, wager placed through the bridge
+--------------------------------------------------------------------------------
+
+Source: research/host-embed-report.json (the `01-lifeboat` entry; a byte-copy is in
+docs/host-embed.json). The harness mounts the guest in the iframe and requires BOTH an on-chain
+session delta AND a guest-rendered settled result, so a demo fallback cannot pass.
+
+  slug            : 01-lifeboat
+  address         : 0xa513e6e4b8f2a923d98304ec87f64353c4d5c853
+  mounted         : true
+  clicked         : "clicked BET (enabled after 0s)"
+  wageredThroughHost (wageredOnChain) : true
+  sawSettle       : true
+  guestChanged    : true
+  sessionsBefore  : 20
+  sessionsAfter   : 21
+  ok              : true
+
+RESULT: PASS — mounted=true, wager placed through the host, chain session count 20 → 21,
+sawSettle=true, guest re-rendered the settled round, ok=true.
+
+HONEST NOTE: the harness also recorded console noise during the run —
+  "Invalid DOM property `flood-opacity`…" / `color-interpolation-filters` / `stop-color` (React
+  kebab-case warnings from the vendored guest bridge) and one "Failed to load resource: … 404".
+None of these prevented mounting, wagering or settling; they are recorded, not hidden.
+
+--------------------------------------------------------------------------------
+8.6  PUBLIC HTTPS — production URL, external probe, standalone browser run, and the config fix
+--------------------------------------------------------------------------------
+
+Source: research/public-deploy-top3.md (coordinator).
+
+  production URL  : https://chain-jam-lifeboat.vercel.app
+  platform        : Vercel (scope `xkq`, production target)
+  deployment id   : dpl_8tn14CMSZ7waPE9oZKrrjug18qD1
+  state           : READY
+
+External probe from this machine (2026-09-27):
+  GET /                     200 text/html; charset=utf-8
+  GET /game/model.mjs       200 application/javascript; charset=utf-8
+  GET /src/app.js           200 application/javascript; charset=utf-8
+  GET /game.manifest.json   200 application/json; charset=utf-8
+  manifest headers          access-control-allow-origin: *, cache-control: public, max-age=300
+  X-Frame-Options / CSP frame-ancestors : absent  (page remains iframe-embeddable)
+  widget tag in body        jam.chain.wtf/widget.js present
+
+Standalone browser run at the public URL (real headless Chrome, no host attached):
+  page loads; DEMO lit; round resolved to
+    "Census: 0 live berths under B25/S014. The colony is lost."; widget badge "CHAIN JAM VOL.1"
+  No hang: the never-settling connection.promise guard falls through to the standalone demo on the
+  real network (cold-load TTI is fine — the guard each project documents is working).
+
+HOSTING-CONFIG FIX (real submission blocker, surfaced by the deploy):
+  public/vercel.json originally carried a `$comment` key holding the rationale. Vercel validates
+  vercel.json with additionalProperties:false and rejected it outright:
+
+      Error: Invalid vercel.json - should NOT have additional property `$comment`. Please remove it.
+
+  → the deploy FAILED. Fix: removed `$comment` from public/vercel.json; the file now contains
+  `headers` only (232 B, down from 444 B). The explanatory note lives in public/_headers, which
+  keeps the full comment, and docs/iframe.md keeps the framing/CORS reasoning. See
+  research/public-deploy-top3.md.
+
+--------------------------------------------------------------------------------
+8.7  CLASSIFICATION AFTER WAVE 3 (matches docs/testnet.md)
+--------------------------------------------------------------------------------
+
+  production host verification ................ EXTERNAL BLOCKED
+  production-chain deployment ................. EXTERNAL BLOCKED
+  public testnet deployment ................... DOES NOT EXIST (proven, not assumed)
+  local chain, chain id 31337 ................. PASS  (20 real settled rounds; see §8.4)
+  in-host embed (local host harness) .......... PASS  (see §8.5)
+  public HTTPS hosting (entrant's obligation) . PASS  (see §8.6)
+  standalone run on the public URL ............ PASS  (see §8.6)
+  exact RTP (2^20 enumeration) ................ PASS  (see §8.3)
+
+================================================================================
+WAVE 4 — ADVERSARIAL CLOSEOUT + CLEAN CHECKOUT  (2026-09-27, Wave 4A)
+================================================================================
+
+Hostile adversarial closeout. Full method, raw evidence and per-attack verdicts: docs/adversarial.md.
+Summary: RTP re-derived exactly from scratch; model<->contract parity verified over the full
+2^20 x 3 board space; cap identity, shipped-dist hygiene and a whole-tree secret scan all clean.
+Two doc inaccuracies corrected (docs/rtp-proof.md histogram rows 0/1/2; "house edge 4.0%" ->
+"4.26%" in README.md, docs/rtp.md, docs/rtp-proof.md). One doc error proven but out of edit scope
+(game/README.md rule-0/rule-1 columns swapped). No money-path claim was falsified.
+
+Clean-checkout procedure (writes only to /tmp):
+  rsync -a --exclude 'dist/' --exclude 'node_modules/' --exclude '.git/' \
+        /home/eya/wtfjam/top3/01-lifeboat/ /tmp/clean-01-lifeboat/
+  dist/ and node_modules/ confirmed absent in the copy.
+
+Verbatim command output from /tmp/clean-01-lifeboat (NO install step):
+
+$ node -e "...package.json dependency fields..."
+dependencies: null
+devDependencies: null
+peerDependencies: null
+optionalDependencies: null
+scripts: {"build":"node scripts/build.mjs","test":"node tests/model.test.mjs && node tests/contract.test.mjs","check":"node scripts/check.mjs","serve":"node scripts/serve.mjs"}
+
+$ npm run build
+
+> lifeboat@1.0.0 build
+> node scripts/build.mjs
+
+built dist/ — 9 files
+      855 B  _headers
+     9834 B  game/model.mjs
+      747 B  game.manifest.json
+     3473 B  index.html
+    15355 B  og-image.png
+    11228 B  src/app.js
+    26836 B  src/sdk/guest.mjs
+     4453 B  src/styles.css
+      232 B  vercel.json
+
+dist total : 73,013 B raw / 27,390 B gzip
+dist page  : 55,824 B raw / 17,327 B gzip (html+css+js+mjs)
+
+$ npm test
+
+> lifeboat@1.0.0 test
+> node tests/model.test.mjs && node tests/contract.test.mjs
+
+lifeboat model tests
+  ok   BANDS tile 0..MAX_STAT with no gap or overlap
+  ok   multipliers are monotonic non-decreasing
+  ok   bandOf boundaries: 5->0, 6->1.2, 7->1.2, 8->2, 12->2, 13->16, 20->16
+  ok   rule masks decode to the labels they claim
+  ok   the row-table step matches a naive independent automaton
+  ok   census over GENERATIONS also matches the naive automaton
+  ok   worked examples, rule 0 (B25/S014)
+  ok   a fully-lit deck dies under every rule inside 14 generations
+  ok   the same deck really does evolve differently under each rule
+  ok   outcome uses the default rule; outcomeWithRule is explicit
+  ok   evolution returns GENERATIONS+1 frames and lands on the census
+  ok   every rule RTP lands in [9300,9800] and the declaration is the floor
+  ok   makeRng returns 32-byte hex and is deterministic
+  ok   makeRng does not collide at high round indices
+
+14 passed
+lifeboat contract tests
+  ok   declares MIT SPDX, matching LICENSE
+  ok   declares a constant, no constructor, implements ICasinoGameV2
+  ok   implements all six ICasinoGameV2 members
+  ok   all step handlers are pure (no reentrancy surface)
+  ok   carries the declared constants
+  ok   carries the three B/S masks
+  ok   paytable boundaries are the model bands
+  ok   the locked rule is committed to gameState and read back from it
+  ok   randomness is requested once, on the pre-word step
+  ok   the reserve is committed at start and never released at settle
+  ok   the word folds exactly as the model folds it
+  ok   onPlayerAction reverts honestly (submitAction:false)
+  ok   contract masks decode to the model rules
+  ok   contract paytable bps equals model bands x 10000
+  ok   contract _step matches model step on sampled boards, every rule
+  ok   contract _census matches model census on sampled boards, every rule
+  ok   contract _fold20 matches model wordTo20, and agrees on the census path
+  ok   full-word inputs (all four lanes) agree
+  ok   the payout cap equals the top band exactly (no slack, no overflow)
+  ok   quoteRiskParams quotes non-zero body variance for a non-heavy-tail game
+
+20 passed
+
+$ npm run check
+
+> lifeboat@1.0.0 check
+> node scripts/check.mjs
+
+  ok   game/model.mjs
+  ok   scripts/build.mjs
+  ok   scripts/check.mjs
+  ok   scripts/serve.mjs
+  ok   src/app.js
+  ok   src/sdk/guest.mjs
+  ok   tests/contract.test.mjs
+  ok   tests/model.test.mjs
+  ok   tools/browser-verify.mjs
+  ok   tools/tune.mjs
+
+10/10 JS files parse
+
+RESULT: clean checkout builds (9 files), tests 14/14 + 20/20, check 10/10, with no install step.
+The freshly built dist/ is byte-identical to the shipped dist/ (`diff -r`, no output).
+
+Additional Wave-4 independent checks (full raw output in docs/adversarial.md):
+  - exact RTP re-derived from scratch (own automaton + own full 2^20 enumeration):
+    9574.2035 / 9575.7103 / 9594.7456 bps; declared 9574 is the floor.
+  - model<->contract parity over the FULL 2^20 x 3 board space: 0 step mismatches,
+    0 census mismatches; paytable 0 mismatches; fold parity 0 over 200,005 words.
+  - payout cap identity holds for all wagers tested x all 21 stats; no negative reserve.
+  - shipped dist/: no framing directive, no root-relative path, no storage/cookie/open/service
+    worker, no vh/vw, exactly one third-party script, .mjs importable, no localhost/abs path.
+  - secret scan of every file (92 paths incl. the clean copy): no private key / mnemonic / API
+    key / token; every 64-hex value is a public tx hash, VRF value, test vector or sha256 digest.
+  - public host re-probed read-only: /, /game/model.mjs, /game.manifest.json all 200 with correct
+    MIME; no X-Frame-Options or CSP on any response.
+
+CORRECTIONS (proven inaccuracies, recorded in docs/adversarial.md):
+  1. docs/rtp-proof.md histogram rows for survivors 0/1/2 -> 250156 / 162680 / 11080
+     (23.85674% / 15.51437% / 1.05667%). RTP unchanged (those states pay 0).
+  2. "house edge ≈ 4.0%" -> "≈ 4.26%" in README.md, docs/rtp.md, docs/rtp-proof.md.
+
+REPORTED, NOT FIXED (outside the Wave-4A edit grant): game/README.md per-rule survivor-band table
+has the rule-0 and rule-1 columns swapped (rule 0 must be 52.6 / 20.3 / 25.9 / 1.2).
+
+================================================================================
+WAVE 3 — REPAIR + LIVE VALIDATION   (front-end + tests/ only)
+================================================================================
+Target: https://chain-jam-lifeboat.vercel.app/  and  top3/01-lifeboat/.
+Protected, NOT touched: game/model.mjs, contracts/*.sol, src/sdk/guest.mjs,
+public/game.manifest.json. Other projects / jam-candidates/** / research/** /
+root docs untouched. No git remotes or pushes. Node :8645 and host harness :3400
+left running and un-reconfigured.
+
+Reproduction method: every defect was reproduced against the LIVE URL first with
+raw CDP Input.dispatchMouseEvent events (never element.click() for verdicts) and
+screenshots, then fixed, built, tested, redeployed, byte-verified and re-driven
+in a fresh browser context.
+
+--------------------------------------------------------------------------------
+DEFECT -> CAUSE -> FIX -> EVIDENCE
+--------------------------------------------------------------------------------
+D6  Chain Jam widget badge interception.
+    Cause: the widget injects a#chain-jam-badge as a fixed BODY-level child with
+      z-index 2147483000; a fixed corner overlay passes over any normally-flowing
+      content, so reserving space cannot stop it covering a control.
+    Fix:   src/styles.css:160  .controls, .rulesrow { position: relative;
+           z-index: 2147483647; }  (lifts both control rows above the badge).
+           Widget kept and never hidden (index.html:19).
+    Before: probe-before.json = 3 badge interceptions —
+             320x568 bet@end area=774; 360x640 demo@end area=1337;
+             390x700 demo@end area=1075.  Badge box 158x37, z=2147483000.
+           Shots before-05-320x568-controls-vs-badge.png,
+                 before-06-390x700-chips-vs-badge.png.
+    After:  probe-after.json = 0 interceptions over 72 hit-tests
+           (6 viewports x 2 anchors x 6 controls); live narrow sweep badgeHits=0.
+
+L1  Disabled BET not unmistakably disabled and unexplained.
+    Cause: the :disabled rule preceded .btn.primary at equal specificity, so the
+      vivid primary background won; cursor:default; opacity:1; filter:none; and no
+      title/aria-describedby.
+    Fix:   src/styles.css:122-135 combined disabled rule AFTER .btn.primary
+           (background var(--panel-dark); opacity .55; filter grayscale(.65);
+           cursor not-allowed); index.html:71-72 title + aria-describedby.
+    Before: controls.bet {cursor:"default", background:"rgb(207, 233, 255)",
+           opacity:"1", filter:"none"}, title:null, ariaDescribedby:null.
+    After:  browser-verify "differs on >=2 style axes" —
+             {cursor:"not-allowed",opacity:"0.55",filter:"grayscale(0.65)",
+              background:"rgb(169, 173, 158)"} vs enabled
+             {cursor:"pointer",opacity:"1",filter:"none",
+              background:"rgb(207, 211, 198)"}; title + aria-describedby present.
+
+L2  Decorative wager field.
+    Cause: onBet never read #wager and sent casino.minBetAmount regardless.
+    Fix:   src/app.js:17 import computeMaxWager; :56-86 tokenDecimals/tokenSymbol/
+           parseAmount/formatAmount/minWagerBase/maxWagerBase; :290-343 onBet reads
+           el('wager').value, parses with token decimals, validates min/host-max,
+           sends amount.toString() to openSession; :418-422 setStandaloneUI disables
+           and labels the field; :471 input sanitiser.
+           index.html:69-70 field title/autocomplete; :74 #wager-note;
+           src/styles.css:137.
+    Before: controls.wager {value:"10", disabled:false, title:null}; onBet did not
+           read the field (HEAD src/app.js).
+    After:  live standalone field disabled + labelled
+           "demo — no money; the wager field is unused here."; host frame BET is
+           enabled, opens a session and it settles through the host
+           (settled sessions on chain 22 -> 23, wagered through the host: true).
+
+L3  Rule chips not reachable by keyboard; selection destroyed focus.
+    Cause: plain divs, no role, tabindex=-1, no aria-checked; chips rebuilt on each
+      selection.
+    Fix:   src/app.js:119-171 buildRuleChips/focusRule/selectRule/updateRuleChips
+           (role=radio, tabIndex=0, aria-checked, Enter/Space/Arrow keys; built
+           once then updated); index.html:65 role="radiogroup".
+    Before: chips role:null tabIndex:-1 ariaChecked:null x3; Tab trace
+           BUTTON#demo.btn -> A#chain-jam-badge -> BODY -> INPUT#wager.field
+           (chips absent).
+    After:  chips ["radio/0/true","radio/0/false","radio/0/false"]; chip focusable
+           and Enter selects it; live chips reachable and selectable.
+
+L4  Narrow-viewport horizontal overflow.
+    Cause: intrinsic min width ~626px pushed the Result/Paytable column off-screen.
+    Fix:   src/styles.css:165-172 @media (max-width:700px) stack .row, release
+           .side min-width, wrap the control bar, reserve badge room.
+    Before: narrow390 {innerW 390, scrollW 626, side.right 626,
+           dewkwrap.right 402, pay.right 615}.  Shot before-04-narrow-390x844.png.
+    After:  live 390x844 scrollW 375 <= innerW 390; browser-verify no horizontal
+           overflow at phone widths across 6 viewports.
+
+L5  Contradictory win text.
+    Cause: a demo win said "Paid 2x." while the Result cell read 0.
+    Fix:   src/app.js:50 isDemoRound (true :275, false :361); :173-196
+           paintHeadline branch; :198-206 paint labels Result (demo) and
+           "demo — no money is paid"; index.html:46-48 #result-title/#k-pay/
+           #k-pay-note.
+    Before: winRound headline "Census: 8 live berths under B24/S23. Paid 2x.",
+           kpay:"0".  Shot before-03-win-headline-vs-payout.png.
+    After:  live headline "Census: 10 live berths under B24/S23. A real 2x wager
+           would pay; this demo pays nothing.", k-pay "0" note
+           "demo — no money is paid"; host frame pay note is the token symbol.
+
+L6  Auto-play overwrote the first-run instruction.
+    Cause: boot auto-played a round ~1.3 s in, before the instruction could be read.
+    Fix:   src/app.js:430-443 renderIdle(); :461 boot renders idle + standalone UI
+           up front; :456-459 startStandalone no longer deals.
+    Before: timeline.firstChangeMs = 1342; a no-click controls snapshot already
+           showed a settled round (kgen 14, live 8, headline "... Paid 2x.").
+           Shot before-01-boot-settled.png.
+    After:  browser-verify FIRST state is the instruction ("Pick a rule, then press
+           DEMO. Nothing is wagered here."), no round auto-played on boot
+           (words=0 gen=0), no berths lit (live=0); fresh-context live wordsDrawn=0.
+
+All seven defects fixed; none deferred.
+
+--------------------------------------------------------------------------------
+LIVE BYTE MATCH (sha256, first 16 hex).  build copies sources verbatim, so the
+pre-fix live bytes hash-equal git HEAD sources and the post-fix live bytes
+hash-equal the local dist/.
+  index.html       a5c6167c7a692da9 -> 8499fed4fc0a517e   CHANGED (fixed)
+  src/app.js       b4a362c21002b62e -> 2c1f7d286ae14bbb   CHANGED (fixed)
+  src/styles.css   c3e2b128047a8a0c -> 49f6cc754a1bfe95   CHANGED (fixed)
+  game/model.mjs   4c87c7466d0d337b -> 4c87c7466d0d337b   UNCHANGED (protected)
+  game.manifest.json 98557d307dda5457 -> 98557d307dda5457 UNCHANGED (protected)
+
+live-vs-local:
+  index.html        live=8499fed4fc0a517e local=8499fed4fc0a517e MATCH
+  src/app.js        live=2c1f7d286ae14bbb local=2c1f7d286ae14bbb MATCH
+  src/styles.css    live=49f6cc754a1bfe95 local=49f6cc754a1bfe95 MATCH
+  game/model.mjs    live=4c87c7466d0d337b local=4c87c7466d0d337b MATCH
+  game.manifest.json live=98557d307dda5457 local=98557d307dda5457 MATCH
+
+Deploy: the Vercel link is in public-deploy/chain-jam-lifeboat/.vercel/project.json
+(projectName chain-jam-lifeboat, orgId team_QvocpUecoEGIETLHy21P9YZx), NOT in
+top3/01-lifeboat. The new dist/ was staged there and deployed with
+`vercel deploy --prod --yes --scope xkq`; the alias serves the fixed bytes.
+
+--------------------------------------------------------------------------------
+QUALITY GATE
+  $ npm run build   -> built dist/ 9 files; dist total 83,501 B raw / 31,101 B gzip;
+                       dist page 66,312 B raw / 21,038 B gzip (html+css+js+mjs)
+  $ npm test        -> model 14 passed, contract 20 passed, UI 9 passed
+                       (NEW tests/ui.test.mjs; package.json test runs it)
+  $ npm run check   -> 11/11 JS files parse
+  $ node tools/browser-verify.mjs (local dist :8901)  -> 29/29 assertions passed
+  $ BASE_URL=https://chain-jam-lifeboat.vercel.app node tools/browser-verify.mjs
+                                                       -> 29/29 assertions passed
+
+tools/browser-verify.mjs was rewritten to assert: first state is the instruction
+(no auto-play); disabled BET differs from enabled on >=2 style axes and carries
+title/aria-describedby; chips are a keyboard radio group (Enter selects); DEMO
+deals and RESOLVES matching game/model.mjs; demo win says the demo pays nothing;
+paytable highlight; DEMO again re-deals a NEW word; at 6 viewports x 2 scroll
+anchors x 6 controls NO control centre returns the Chain Jam badge; no horizontal
+overflow; all assets 200.
+
+Real-input fresh-context live drive (raw CDP mouse events + screenshots
+after-01..07): open = instruction wordsDrawn=0; disabled #wager / #bet clicks
+change nothing (hitIsTarget=true); each rule chip click selects; DEMO deals and
+settles (gen 14, kpop 10, 2x, demo wording, kpay 0); DEMO again wordChanged=true;
+390x844 scrollW 375 <= 390 and badgeHits=0; the Chain Jam badge still opens a new
+tab (tabs 1 -> 2).
+
+--------------------------------------------------------------------------------
+HOST EMBED  (node jam-candidates/tools/verify-host-embed.mjs 01-lifeboat)
+The harness serves vendor/casino-sdk/simulator/public/games/lifeboat/, which held
+a pre-fix copy; it was content-refreshed from the new dist/ (file copy only — the
+harness was NOT restarted or reconfigured). Confirmed live over :3400 that it now
+serves the fixed bytes (index.html has #wager-note; app.js has computeMaxWager).
+  => PASS   01-lifeboat  mounted=true settled=true demoFallback=undefined
+     clicked guest control: clicked BET (enabled after 0s)
+     settled sessions on chain: 22 -> 23   (wagered through the host: true)
+     settled marker reached the guest: true   guest text changed: true
+  1/1 candidates reached a settled reveal inside the host frame   (exit 0)
+  console errors: React `flood-opacity` / `color-interpolation-filters`
+    DOM-property warnings emitted by the HOST harness UI, not the lifeboat guest
+    (plain DOM, no React); pre-existing and unrelated.
+
+CANDIDATE VERIFIER  (node jam-candidates/tools/verify-candidate.mjs top3/01-lifeboat)
+  1 structure PASS   2 syntax PASS (14 JS files)   3 manifest PASS
+  4 widget tag PASS  5 hygiene PASS  6 framing PASS  7 ref param INFO
+  8 og:image INFO    9 model loads PASS  10 paytable PASS  11 rtp truth PASS
+  12 rtp sampler PASS  13 key space PASS  14 weight INFO
+  => PASS  1/1 candidates PASS   (exit 0)
+(That run regenerated the machine-readable docs/verification.json.)
+
+--------------------------------------------------------------------------------
+FILES CHANGED (front-end + tests only)
+  index.html                 D6 markers, L1 title/aria, L2 field+wager-note, L5 ids
+  src/app.js                 L2 wager plumbing, L3 keyboard chips, L5 demo wording,
+                             L6 idle first state, button wiring
+  src/styles.css             L1 disabled rule, L4 media query, D6 raised rows
+  tests/ui.test.mjs          NEW — 9 static regression guards (D6/L1/L2/L3/L4/L5/L6)
+  package.json               test also runs tests/ui.test.mjs
+  tools/browser-verify.mjs   rewritten — 29 browser assertions
+  docs/verification.json     regenerated by verify-candidate.mjs
+  docs/verification.txt      this WAVE 3 section
+  research/wave3-lifeboat-repair.md + research/wave3-lifeboat-shots/*  evidence
+
+--------------------------------------------------------------------------------
+LIMITATION / CARRIED FORWARD (not a defect)
+  - No public-testnet path: per the Wave-2 verdict the only entrant environment is
+    the local simulator (chain 31337); the hosted BET path is provable only inside
+    the local host harness (done above).
+  - A non-default wager amount is not driven end-to-end through the host: that
+    needs the host harness / simulator node reconfigured, which was out of scope
+    and read-only. The wager plumbing is statically tested; the host embed proves a
+    session opens and settles.
+  - Arrow-key chip navigation is covered by the static test only.

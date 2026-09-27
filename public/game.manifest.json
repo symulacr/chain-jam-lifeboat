@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "gameId": "lifeboat",
+  "apiVersion": 1,
+  "defaultLocale": "en",
+  "locales": {
+    "en": {
+      "name": "Lifeboat",
+      "description": "A twenty-berth toroidal deck lit by one verified random word. The player locks a life rule before the wager, the deck runs fourteen generations under it, and the payout is a banded function of the live population of the final census. Standalone demo plays with no host."
+    }
+  },
+  "presentation": {
+    "mode": "full-iframe",
+    "hostPanels": { "openSession": false, "history": false, "status": false }
+  },
+  "capabilities": {
+    "openSession": true,
+    "submitAction": false,
+    "forfeitExpiredSession": false,
+    "cancelStuckRandomness": true,
+    "resize": true
+  }
+}

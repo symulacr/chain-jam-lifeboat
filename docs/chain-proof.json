@@ -1,0 +1,76 @@
+{
+  "slug": "lifeboat",
+  "gameName": "LifeboatGame",
+  "game": "0xa513e6e4b8f2a923d98304ec87f64353c4d5c853",
+  "ok": true,
+  "rounds": 20,
+  "stuck": 0,
+  "parityFails": 0,
+  "tiers": {
+    "0x": 12,
+    "2x": 4,
+    "1.2x": 4
+  },
+  "realisedRtpPct": 64,
+  "declaredBps": 9574,
+  "maxEscrow": "1000000000000000000",
+  "maxReserved": "15000000000000000000",
+  "maxPayout": "16000000000000000000",
+  "probabilityWad": "12245178222656250",
+  "bodyVarianceScaled": "1327996826171875000000000000000000000000000000000000000",
+  "heavyTail": false,
+  "vrfFulfilmentTxs": [
+    "0x7ea1def18ee67da6fea4d13841063ccfcd4441efa53e91ea0e314b1c1637cc89",
+    "0xcd565594a0ce4f3e87f0e15b625dddbcc27ff44c95b1c118a73c1451f0430903",
+    "0xc4ab45d8c8a499505ffe4e22904c5334c7f2b39af0aac9f7e70d63d8bf2d6059"
+  ],
+  "requestIds": [
+    "0xec409d410d4101c092648788c7e06f4285182e3c1b5dfe8ed14db372ac45f4d5",
+    "0xef52d5b6ba2d12e1e305da30646ac2862fb4ebcf3dd6ec120fdd354c99ca98b7",
+    "0x81117beae1a340cd8cb6e7dc23e1b651bd3daa4dd3506742a7c980f6eae03fee"
+  ],
+  "topPath": {
+    "word": "0x9fff7a9928c501e4f9a0157bc643c6248d307591da20683610184244fa8ab804",
+    "stat": 14,
+    "mult": 16,
+    "payoutWei": "16000000000000000000",
+    "nextPhase": 3,
+    "capWei": "16000000000000000000",
+    "withinCap": true
+  },
+  "firstRounds": [
+    {
+      "round": 1,
+      "openTx": "0x7ea1def18ee67da6fea4d13841063ccfcd4441efa53e91ea0e314b1c1637cc89",
+      "settleTx": "0xc69bc61f5985404a867c80f268243f3bb857623b430bc37d3a19558ddfa5deba",
+      "block": 27,
+      "sessionId": "1",
+      "randomness": "0x0db124f0cd1a252a5b55483d7f89c48521c80ba9d4d521df9b81131b73b992d9",
+      "payoutWei": "0",
+      "modelMult": 0,
+      "parity": true
+    },
+    {
+      "round": 2,
+      "openTx": "0xcd565594a0ce4f3e87f0e15b625dddbcc27ff44c95b1c118a73c1451f0430903",
+      "settleTx": "0xe2b121a4ecf17009747d33639b817b5c28d75d0514a7a2c00bd364ec4d733977",
+      "block": 29,
+      "sessionId": "2",
+      "randomness": "0x6d5f1ddb27dee6ee34eebd134213625fa02a96dba722796556eb112538964c42",
+      "payoutWei": "0",
+      "modelMult": 0,
+      "parity": true
+    },
+    {
+      "round": 3,
+      "openTx": "0xc4ab45d8c8a499505ffe4e22904c5334c7f2b39af0aac9f7e70d63d8bf2d6059",
+      "settleTx": "0x2a2bc4ab11f01c414f258ff064dcdbb274133f08ff8d767fd95e3a277f09cac8",
+      "block": 31,
+      "sessionId": "3",
+      "randomness": "0x4e29888fbd88d88d554e9b347b9f7a8b9d736fe26037c66d04824117e5606729",
+      "payoutWei": "0",
+      "modelMult": 0,
+      "parity": true
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+/* LIFEBOAT — chrome. Extracted from the inline <style> block of the verified
+   jam-candidates/lifeboat/index.html (indentation normalised only). Hand-written CSS with no
+   external asset reference of any kind, so nothing needs to live in public/ for styling. */
+:root {
+  --ink: #0e1714;
+  --panel: #cfd3c6;
+  --panel-dark: #a9ad9e;
+  --led: #35e08a;
+  --led-dim: #1c3a2c;
+  --gold: #d8a324;
+  --red: #a8342c;
+  --steel: #6d7469;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #3f4742;
+  color: var(--ink);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, "DejaVu Sans", sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.desk {
+  max-width: 640px;
+  margin: 14px auto 22px;
+  border: 2px solid #111a16;
+  background: var(--panel);
+  box-shadow: 5px 5px 0 rgba(0,0,0,.45);
+}
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: linear-gradient(180deg, #2f6b52 0%, #14402f 100%);
+  color: #eaf7ef;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.titlebar .name { flex: 1 1 auto; }
+.wbtn {
+  width: 17px; height: 15px;
+  border: 1px solid #08160f;
+  background: var(--panel);
+  color: #14402f;
+  font-size: 10px;
+  line-height: 13px;
+  text-align: center;
+  font-weight: 700;
+}
+.menubar { display: flex; gap: 14px; padding: 3px 8px; border-bottom: 1px solid var(--steel); }
+.menubar span { text-decoration: underline; }
+.body { padding: 10px; }
+.row { display: flex; gap: 10px; align-items: flex-start; }
+.deckwrap {
+  border: 2px inset var(--panel-dark);
+  background: #0d1512;
+  padding: 12px;
+  flex: 0 0 auto;
+}
+.deckgrid { display: flex; flex-direction: column; gap: 6px; }
+.drow { display: flex; gap: 6px; justify-content: center; }
+.berth {
+  width: 42px; height: 42px;
+  border: 1px solid #05100a;
+  background: radial-gradient(circle at 40% 35%, #16241d 0%, #0a120e 75%);
+  position: relative;
+  transition: background .06s linear;
+}
+.berth::after {
+  content: "";
+  position: absolute; inset: 5px;
+  border-radius: 3px;
+  background: var(--led-dim);
+  box-shadow: inset 0 0 3px rgba(0,0,0,.8);
+}
+.berth.live::after {
+  background: radial-gradient(circle at 42% 34%, #d7ffe8 0%, var(--led) 52%, #0f8c4d 100%);
+  box-shadow: 0 0 7px rgba(53,224,138,.75);
+}
+.berth.final::after { outline: 2px solid var(--gold); outline-offset: 1px; }
+.side { flex: 1 1 auto; min-width: 214px; }
+.panel {
+  border: 2px groove var(--panel-dark);
+  background: #e4e7db;
+  padding: 7px 9px;
+  margin-bottom: 8px;
+}
+.panel h2 {
+  margin: 0 0 5px;
+  font-size: 12px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #14402f;
+  border-bottom: 1px solid var(--steel);
+  padding-bottom: 2px;
+}
+.kv { display: flex; justify-content: space-between; gap: 8px; }
+.kv b { font-variant-numeric: tabular-nums; }
+.big { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.headline { min-height: 34px; font-weight: 700; }
+.headline.win { color: #14622f; }
+.headline.lose { color: var(--red); }
+table.pay { width: 100%; border-collapse: collapse; }
+table.pay th, table.pay td {
+  border: 1px solid var(--steel); padding: 2px 5px; text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+table.pay th { background: #c6cabb; font-size: 11px; text-transform: uppercase; }
+table.pay tr.on td { background: #fff6cf; font-weight: 700; }
+.btn {
+  border: 2px outset var(--panel); background: var(--panel); padding: 4px 12px;
+  font: inherit; font-weight: 700; cursor: pointer; min-width: 78px;
+}
+.btn:active { border-style: inset; }
+.btn.primary { background: #cfe9ff; }
+/* The disabled rule must come AFTER `.btn.primary` (equal specificity, later wins) and must
+   reset the background: the old order left the disabled BET wearing the vivid primary blue.
+   It now differs from an enabled button in opacity, background, filter and cursor — and it
+   carries a `title`/`aria-describedby` (index.html) saying WHY it is inert. */
+.btn:disabled,
+.btn.primary:disabled {
+  background: var(--panel-dark);
+  color: #6b6f63;
+  opacity: .55;
+  filter: grayscale(.65);
+  cursor: not-allowed;
+  border-style: solid;
+  border-color: var(--steel);
+}
+.field {
+  border: 2px inset var(--panel-dark); background: #fff; padding: 3px 5px;
+  width: 78px; font: inherit; font-variant-numeric: tabular-nums;
+}
+.field:disabled { background: #dfe2d7; color: #6b6f63; cursor: not-allowed; }
+.wager-note { color: #6b6f63; font-size: 11px; }
+.hint { color: #45483f; font-size: 12px; }
+.foot { border-top: 1px solid var(--steel); padding: 5px 9px; background: #c6cabb; font-size: 11px; color: #363a31; }
+.rules { display: flex; flex-direction: column; gap: 5px; }
+.rule {
+  border: 2px groove var(--panel-dark); background: #e4e7db; padding: 4px 8px;
+  cursor: pointer; display: flex; justify-content: space-between; gap: 8px;
+}
+.rule .lab { font-weight: 700; }
+.rule .note { color: #4a4e44; }
+.rule.on { background: #fff6cf; border-style: inset; }
+.rule[aria-disabled="true"] { cursor: default; color: #85897c; }
+.gen { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* ------------------------------------------------ Chain Jam widget clearance (wave3 / D6) ---
+   The widget injects `a#chain-jam-badge` as a fixed BODY-level child with
+   z-index 2147483000 (verified live: position fixed, 158x37, bottom-right). A fixed overlay at
+   the viewport corner passes over ANY normally-flowing content as the page scrolls, so
+   reserving page space alone cannot stop it covering a control. The two rows that carry
+   controls are lifted into the root stacking context ABOVE the badge, so
+   `document.elementFromPoint` at a control's centre can never return the badge. The widget is
+   kept (submission requirement), never hidden, still clickable where it does not overlap a
+   control. `.body` reserves bottom room so the notice/foot are not obscured either. */
+.controls, .rulesrow { position: relative; z-index: 2147483647; }
+
+/* Narrow viewports: stack the deck and the Census/Result column, keep the control bar on one
+   line and let it wrap. Before this the intrinsic minimum width was ~626px, so a 390px phone
+   pushed the whole Result column off-screen (scrollWidth 626 vs innerWidth 390). */
+@media (max-width: 700px) {
+  .row { flex-direction: column; align-items: stretch; }
+  .side { min-width: 0; width: 100%; }
+  .deckwrap { align-self: center; }
+  .row.controls { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .controls .btn, .controls .field { flex: 0 0 auto; }
+  .body { padding-bottom: 60px; } /* reserve room for the fixed widget badge at the page bottom */
+}

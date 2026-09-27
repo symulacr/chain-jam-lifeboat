@@ -1,0 +1,17 @@
+{
+  "name": "lifeboat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LIFEBOAT — a cellular-automaton census dealt by one verified VRF word. Exact RTP 9574 bps.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node tests/model.test.mjs && node tests/contract.test.mjs && node tests/ui.test.mjs && node tests/selection.test.mjs && node tests/evm.test.mjs",
+    "check": "node scripts/check.mjs",
+    "serve": "node scripts/serve.mjs"
+  }
+}

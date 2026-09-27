@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIFEBOAT</title>
+<meta property="og:image" content="og-image.png" />
+<!--
+  LIFEBOAT — 20-berth census. Servable page.
+    ./src/styles.css      the chrome (extracted from the original inline <style>)
+    ./src/app.js          the frontend app; it imports ../game/model.mjs and ./sdk/guest.mjs
+    ./game/model.mjs      the single source of truth (preloaded here; the app imports it)
+  The og:image string stays relative ("og-image.png"); the build places public/og-image.png
+  at the served root, so it resolves from both the source tree's dist/ and any static host.
+  The widget tag below is a literal the automatic submit check is evidenced to require.
+-->
+<link rel="stylesheet" href="./src/styles.css">
+<link rel="modulepreload" href="./game/model.mjs">
+<script async src="https://jam.chain.wtf/widget.js"></script>
+</head>
+<body>
+<div class="desk">
+  <div class="titlebar">
+    <span class="name">LIFEBOAT &mdash; 20-BERTH CENSUS</span>
+    <span class="wbtn" aria-hidden="true">_</span>
+    <span class="wbtn" aria-hidden="true">&#9633;</span>
+    <span class="wbtn" aria-hidden="true">&#10005;</span>
+  </div>
+  <div class="menubar"><span>Deck</span><span>Census</span><span>Help</span></div>
+  <div class="body">
+    <div class="row">
+      <div class="deckwrap">
+        <div class="deckgrid" id="deck" aria-label="twenty berth deck"></div>
+        <div class="hint" style="color:#9fb3a8;text-align:center;margin-top:7px">
+          gen <span class="gen" id="k-gen">0</span> / 14 &mdash; the census is counted on the final frame only
+        </div>
+      </div>
+      <div class="side">
+        <div class="panel">
+          <h2>Census</h2>
+          <div class="kv"><span>Live berths</span><b id="k-pop">20</b></div>
+          <div class="kv"><span>Return</span><b id="k-mult">&mdash;</b></div>
+          <div class="kv"><span>Rule locked</span><b id="k-rule">&mdash;</b></div>
+        </div>
+        <div class="panel">
+          <h2 id="result-title">Result</h2>
+          <div class="big" id="k-pay">&mdash;</div>
+          <div class="hint" id="k-pay-note"></div>
+          <div class="headline" id="headline">Pick a rule, then press DEMO. Nothing is wagered here.</div>
+        </div>
+        <div class="panel">
+          <h2>Paytable (final census)</h2>
+          <table class="pay" id="pay">
+            <thead><tr><th>Survivors</th><th>Return</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="row rulesrow" style="margin-top:10px">
+      <div style="flex:1 1 auto">
+        <div class="hint" style="margin-bottom:4px">
+          <b>Lock the rule before the word is drawn.</b> The same deck evolves differently under each.
+        </div>
+        <div class="rules" id="rules" role="radiogroup" aria-label="rule to lock for the next round"></div>
+      </div>
+    </div>
+    <div class="row controls" style="margin-top:10px;align-items:center">
+      <input class="field" id="wager" value="10" inputmode="decimal" autocomplete="off"
+             aria-label="wager amount" title="Amount to wager, in the host token.">
+      <button class="btn primary" id="bet" disabled aria-describedby="notice"
+              title="BET connects when the Chain.wtf host is present — this standalone page runs a free demo.">BET</button>
+      <button class="btn" id="demo">DEMO</button>
+      <span class="wager-note" id="wager-note" aria-live="polite"></span>
+    </div>
+    <div class="hint" id="notice" style="margin-top:6px"></div>
+  </div>
+  <div class="foot">
+    One verified random word lights the deck. The payout is the CENSUS after
+    14 generations &mdash; not how far it spreads &mdash; under the rule you locked.
+  </div>
+</div>
+
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>
