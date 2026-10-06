@@ -104,6 +104,17 @@ Pushed and current on `master`. Paths like `research/…`, `jam-candidates/…` 
 in the docs below are relative to the parent monorepo, not to this repository; a clean clone of
 this repo builds and tests on its own.
 
+## Sound
+
+WebAudio oscillators only — **no audio file ships**, matching the entry's content rules. Locking a
+rule ticks, each of the 14 generations ticks once on a rising pitch, and the final census plays a
+banded sting: 0x a low fall, any paying band an arpeggio, and the 16x top tier a longer one. The
+sting keys off the same `mult` the headline reads, so what you hear and what the Result cell says
+cannot disagree. The titlebar carries a mute button (`#mute`, a real `<button>` with `aria-pressed`)
+that short-circuits every later cue without touching the round in flight. Driven in a real headless
+browser: 16 oscillators on a losing round (14 generations + 2), 17 on a paying one (14 + 3), and 0
+while muted, with the round completing identically either way.
+
 ## Public deployment notes
 
 - `dist/` is a static tree: `index.html`, `game/`, `src/`, and the contents of `public/` at the

@@ -295,4 +295,26 @@ await testAsync('L7: a census that PAYS renders as a win, including the 6 and 7 
   }
 });
 
+test('L8: audio is oscillator-only, mutable, and keyed off the payout band', () => {
+  assert.ok(!/\.(mp3|wav|ogg|m4a|flac)\b/i.test(html + css + app), 'the page references no audio file');
+  assert.ok(!/new Audio\(|<audio\b/i.test(app), 'no HTMLAudioElement; sound is oscillators only');
+  assert.match(app, /window\.AudioContext \|\| window\.webkitAudioContext/, 'the audio context is feature-detected');
+  assert.match(html, /<button class="wbtn" id="mute" type="button"[^>]*aria-pressed="false"/,
+    'index.html ships a real <button id="mute"> carrying its pressed state');
+  assert.match(app, /el\('mute'\)\.addEventListener\('click'/, 'the mute control is wired');
+  assert.match(app, /if \(muted\) return null;/, 'muting short-circuits before any oscillator is built');
+  assert.match(app, /b\.setAttribute\('aria-pressed', muted \? 'true' : 'false'\)/, 'muting is announced to assistive tech');
+  // The census sting must read the payout band, never a population threshold of its own — the same
+  // class of bug L7 exists to catch in the headline.
+  assert.match(app, /function soundCensus\(\) \{\s*const mult = bandOf\(stat\);/,
+    'the census sting is keyed off the payout band');
+  assert.doesNotMatch(app, /function soundCensus\(\) \{[^}]*\bstat\s*[<>]=/, 'the census sting has no population threshold');
+  for (const cue of ['rule', 'gen', 'win', 'big', 'lose']) {
+    assert.match(app, new RegExp(`\\b${cue}:\\s*\\(`), `the ${cue} cue is defined`);
+  }
+  assert.match(app, /sound\.gen\(g\);/, 'each generation ticks');
+  assert.match(app, /soundCensus\(\);/, 'the census sting fires on the final frame');
+  assert.match(app, /sound\.rule\(\);/, 'locking a rule ticks');
+});
+
 console.log(`\n${pass} passed${process.exitCode ? ', SOME FAILED' : ''}`);

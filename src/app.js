@@ -159,6 +159,8 @@ function selectRule(id) {
   if (busy) return;
   chosenRule = id;
   updateRuleChips();
+  // Locking the rule is this game's one decision, so it gets its own sound.
+  sound.rule();
   el('notice').textContent = 'Rule ' + RULES[id].label + ' will be locked when the round starts.';
 }
 
@@ -232,6 +234,60 @@ function paint(final) {
   }
 }
 
+// ---------------------------------------------------------------- audio
+// WebAudio oscillators only — no audio file ships, matching the entry's content rules and the two
+// sibling games. Everything here is presentation: no sound call can change a payout, because the
+// band is computed in game/model.mjs before any of it runs.
+let audioCtx = null;
+let muted = false;
+
+function ensureAudio() {
+  if (muted) return null;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === 'suspended') void audioCtx.resume();
+    return audioCtx;
+  } catch { return null; }
+}
+
+function blip(freq, ms, type = 'square', gain = 0.035, delay = 0) {
+  const play = () => {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t0 = ctx.currentTime;
+    amp.gain.setValueAtTime(gain, t0);
+    amp.gain.exponentialRampToValueAtTime(0.0001, t0 + ms / 1000);
+    osc.connect(amp).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + ms / 1000);
+  };
+  if (delay > 0) window.setTimeout(play, delay); else play();
+}
+
+const arp = (notes, ms, gain, delay) => notes.forEach((f, i) => blip(f, ms, 'triangle', gain, i * delay));
+
+const sound = {
+  rule: () => blip(520, 45, 'square', 0.02),
+  // One soft tick per generation, rising as the census advances, so the 14 frames have a spine.
+  gen: (g) => blip(300 + g * 26, 34, 'square', 0.012),
+  win: () => arp([523, 659, 784], 150, 0.05, 80),
+  big: () => arp([523, 659, 784, 1046, 1318], 190, 0.055, 75),
+  lose: () => { blip(180, 200, 'sawtooth', 0.045); blip(110, 240, 'sawtooth', 0.04, 130); },
+};
+
+// The census sting keys off the SAME `mult` the headline uses, so what you hear and what the
+// Result cell says cannot disagree. Any band that pays reads as a win; only a genuine 0x loses.
+function soundCensus() {
+  const mult = bandOf(stat);
+  if (mult >= MAX_MULT) sound.big(); else if (mult > 0) sound.win(); else sound.lose();
+}
+
 // ---------------------------------------------------------------- reveal
 function reveal(word, ruleId, amount, sessionId) {
   clearTimers();
@@ -253,9 +309,11 @@ function reveal(word, ruleId, amount, sessionId) {
     for (let i = 0; i < CELLS; i++) stat += (board >> i) & 1;
     el('k-gen').textContent = String(g);
     drawDeck(g === frames.length - 1);
+    sound.gen(g);
     if (g >= frames.length - 1) {
       busy = false;
       stat = census(start, ruleId);
+      soundCensus();
       payout = amount;
       paint(true);
       if (hostApi && currentSessionId !== null) {
@@ -481,6 +539,14 @@ function boot() {
   // impossible. Found by driving the page in a real browser, not by reading it.
   el('demo').addEventListener('click', onDemo);
   el('bet').addEventListener('click', onBet);
+  // Mute is read inside ensureAudio(), so toggling it stops every later cue without touching any
+  // oscillator that is already ringing. `aria-pressed` carries the state for assistive tech.
+  el('mute').addEventListener('click', () => {
+    muted = !muted;
+    const b = el('mute');
+    b.textContent = muted ? '🔇' : '🔊';
+    b.setAttribute('aria-pressed', muted ? 'true' : 'false');
+  });
   // Keep the field numeric as it is typed (host mode only; standalone it is disabled anyway).
   el('wager').addEventListener('input', e => { e.target.value = e.target.value.replace(/[^0-9.]/g, ''); });
   try {

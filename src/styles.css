@@ -49,6 +49,10 @@ html, body {
   text-align: center;
   font-weight: 700;
 }
+/* The mute control is a real button so it is focusable and carries aria-pressed; it needs the
+   user-agent padding and appearance reset the decorative spans never had. */
+#mute { padding: 0; font-family: inherit; cursor: pointer; }
+#mute:focus-visible { outline: 2px solid #14402f; outline-offset: 1px; }
 .menubar { display: flex; gap: 14px; padding: 3px 8px; border-bottom: 1px solid var(--steel); }
 .menubar span { text-decoration: underline; }
 .body { padding: 10px; }
