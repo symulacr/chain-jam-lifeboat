@@ -97,6 +97,7 @@ contract's fold/automaton/paytable against the model) — it does not need a cha
 |---|---|
 | repository | **https://github.com/symulacr/chain-jam-lifeboat** |
 | branch | `master` |
+| jam status | **approved**, submitted 2026-09-27, live in the jam gallery |
 | public build | https://chain-jam-lifeboat.vercel.app |
 
 Pushed and current on `master`. Paths like `research/…`, `jam-candidates/…` and `vendor/…` cited
