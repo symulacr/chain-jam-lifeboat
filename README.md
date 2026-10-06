@@ -91,6 +91,18 @@ The contract compiles standalone (`solc 0.8.36 --optimize`, `LifeboatGame.bin` =
 `tests/contract.test.mjs` runs an executed JS↔Solidity parity check (a transliteration of the
 contract's fold/automaton/paytable against the model) — it does not need a chain.
 
+## Where this lives
+
+| | |
+|---|---|
+| repository | **https://github.com/symulacr/chain-jam-lifeboat** |
+| branch | `master` |
+| public build | https://chain-jam-lifeboat.vercel.app |
+
+Pushed and current on `master`. Paths like `research/…`, `jam-candidates/…` and `vendor/…` cited
+in the docs below are relative to the parent monorepo, not to this repository; a clean clone of
+this repo builds and tests on its own.
+
 ## Public deployment notes
 
 - `dist/` is a static tree: `index.html`, `game/`, `src/`, and the contents of `public/` at the
