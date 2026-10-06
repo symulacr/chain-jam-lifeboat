@@ -1,13 +1,170 @@
 # verification.txt — LIFEBOAT (top3/01-lifeboat)
 
-Date: 2026-09-27. Phase: FINAL BUILD-COMPLETION, Wave 2A.
-Every block below is pasted verbatim from a captured command; nothing is paraphrased. The
-per-check JSON artefact `docs/verification.json` is written by the shared harness in this same run.
+THIS FILE IS AN APPEND-ONLY LOG OF DATED RUNS. IT IS NOT A SNAPSHOT OF ONE RUN.
+Every block below is pasted verbatim from a captured command; nothing is paraphrased. A metric
+that appears twice with two different values is NOT a contradiction: the earlier block is history
+and the later block supersedes it. The per-check JSON artefact `docs/verification.json` is written
+by the shared harness in that run.
+
+RUN INDEX — in file order, each with the date its commands were actually run
+  RUN 2026-10-02  CROSS-APP DOC + TEST-GATE CORRECTION ...... section 0 below
+  RUN 2026-09-27  Wave 2A build-completion (sections 1-7)
+  RUN 2026-09-27  WAVE 3 — REAL CHAIN + HOST EMBED + PUBLIC HTTPS (section 8)
+  RUN 2026-09-27  WAVE 4 — ADVERSARIAL CLOSEOUT + CLEAN CHECKOUT
+  RUN 2026-09-27  WAVE 3 — REPAIR + LIVE VALIDATION
+  Several separate runs share the date 2026-09-27; the section headers are the only thing that
+  distinguishes them. Where a historical date is genuinely unknown it is written "date not
+  recorded" rather than guessed.
+
+SUPERSEDED VALUES — each was a real run; none is wrong for its own date
+  browser harness assertion count   23/23 (a first run of the same harness)  ->  26/26 (section 5)
+                                 ->  29/29 (WAVE 3 repair run).  The count rises because
+                                    checks were ADDED; an older block is not evidence that any
+                                    check was dropped.
+  shared-harness check 11 "rtp truth"   9575 bps (section 3, Wave 2A)  /  9558 bps (section 8.2,
+                                 WAVE 3) against the declared 9574.  A random 2,000,000-word
+                                 sample; it moves between runs by design and is not the RTP
+                                 evidence. The exact figure comes from `verify-exact-rtp.mjs`
+                                 brute-forcing the 2^20 board space (section 4b / 8.3).
 
 Host: WSL2 Ubuntu-24.04, node v26.10.0, solc 0.8.34+commit.80d5c536.Linux.g++.
 Browser: /home/eya/.agent-browser/browsers/chrome-154.0.8037.57/chrome (headless, CDP).
 Ports used: 8901 (static server) and 9412 (CDP). No chain was touched; no port owned by another
 session was bound.
+
+
+================================================================================
+0.  CURRENT RUN — 2026-10-02
+    Cross-app doc-claim correction, and the EVM toolchain gate made fatal.
+================================================================================
+$ cd /home/eya/wtfjam/top3/01-lifeboat && npm test
+
+> lifeboat@1.0.0 test
+> node tests/model.test.mjs && node tests/contract.test.mjs && node tests/ui.test.mjs && node tests/selection.test.mjs && node tests/evm.test.mjs
+
+lifeboat model tests
+  ok   BANDS tile 0..MAX_STAT with no gap or overlap
+  ok   multipliers are monotonic non-decreasing
+  ok   bandOf boundaries: 5->0, 6->1.2, 7->1.2, 8->2, 12->2, 13->16, 20->16
+  ok   rule masks decode to the labels they claim
+  ok   the row-table step matches a naive independent automaton
+  ok   census over GENERATIONS also matches the naive automaton
+  ok   worked examples, rule 0 (B25/S014)
+  ok   a fully-lit deck dies under every rule inside 14 generations
+  ok   the same deck really does evolve differently under each rule
+  ok   outcome uses the default rule; outcomeWithRule is explicit
+  ok   evolution returns GENERATIONS+1 frames and lands on the census
+  ok   every rule RTP lands in [9300,9800] and the declaration is the floor
+  ok   makeRng returns 32-byte hex and is deterministic
+  ok   makeRng does not collide at high round indices
+  ok   wordTo20 refuses a malformed word instead of folding it into a plausible-looking board
+
+15 passed
+lifeboat contract tests
+  ok   declares MIT SPDX, matching LICENSE
+  ok   declares a constant, no constructor, implements ICasinoGameV2
+  ok   implements all six ICasinoGameV2 members
+  ok   all step handlers are pure (no reentrancy surface)
+  ok   carries the declared constants
+  ok   carries the three B/S masks
+  ok   paytable boundaries are the model bands
+  ok   the locked rule is committed to gameState and read back from it
+  ok   randomness is requested once, on the pre-word step
+  ok   the reserve is committed at start and never released at settle
+  ok   the word folds exactly as the model folds it
+  ok   onPlayerAction reverts honestly (submitAction:false)
+  ok   contract masks decode to the model rules
+  ok   contract paytable bps equals model bands x 10000
+  ok   contract _step matches model step on sampled boards, every rule
+  ok   contract _census matches model census on sampled boards, every rule
+  ok   contract _fold20 matches model wordTo20, and agrees on the census path
+  ok   full-word inputs (all four lanes) agree
+  ok   the payout cap equals the top band exactly (no slack, no overflow)
+  ok   quoteRiskParams quotes non-zero body variance for a non-heavy-tail game
+
+20 passed
+lifeboat UI regression tests
+  ok   D6: controls and rule-chip rows are lifted above the widget badge z-index
+  ok   L1: disabled buttons desaturate, dim, and use a not-allowed cursor
+  ok   L1: the disabled BET explains itself with title + aria-describedby
+  ok   L2: host BET reads the field, parses the host decimals, and validates min/max
+  ok   L2: standalone disables and labels the wager as a no-money demo
+  ok   L3: rule chips are a keyboard radio group
+  ok   L4: a narrow media query stacks the layout instead of overflowing
+  ok   L5: a demo never says "Paid" next to a zero payout
+  ok   L6: no round auto-plays on boot before the user acts
+  ok   L7: a census that PAYS renders as a win, including the 6 and 7 bands
+
+10 passed
+lifeboat selection tests
+  ok   words decodes the four settled words
+  ok   isSettledRow rejects empty / short / missing gameState
+  ok   keyOf prefers sessionKey, falls back to sessionId
+  ok   a single settled row is picked
+  ok   nothing new renders nothing (empty, unsettled, or already-rendered)
+  ok   reload (no pendingKey) renders the NEWEST settled row
+  ok   a pendingKey that has settled wins over a newer unrelated row
+  ok   two in flight, older settles first: renders the older, no wedge; then the pending
+  ok   cancelled pending never settles: no wedge, and a later settlement still renders
+  ok   malformed rows are ignored
+  ok   a reveal in flight is never interrupted (busy -> null)
+  ok   two rounds settling in one snapshot are both revealed, over successive snapshots
+  ok   a backlog drains oldest-first once a fresh page has shown the newest
+  ok   a newly settled row is shown without re-rendering the older shown rows
+  ok   REGRESSION 2(d): a backlog of N settled rows drains fully (each once) then rests
+  ok   REGRESSION 2(d): the drain terminates even as new rows keep arriving
+  ok   a single-key caller is REJECTED (cannot silently reintroduce the loop bug)
+  ok   an array of keys is accepted
+  ok   A: a non-hex gameState is contained to its own row — valid rows still render
+  ok   B: a settled row encoding a rule outside RULES is not renderable
+  ok   C: the picked row carries the host reveal id next to the feed key
+
+21 passed
+lifeboat EVM test (compile + deploy + host lifecycle)
+  [info] LifeboatGame deployed at 0x5fbdb2315678afecb367f032d93f642f64180aa3
+  ok   rule 0: committed rule round-trips through gameState
+  ok   rule 0: onRandomness honours the committed rule (pop == model census)
+  ok   rule 1: committed rule round-trips through gameState
+  ok   rule 1: onRandomness honours the committed rule (pop == model census)
+  ok   rule 2: committed rule round-trips through gameState
+  ok   rule 2: onRandomness honours the committed rule (pop == model census)
+  ok   F1 regression: the full rule space 0..2 does not collapse to one census
+  ok   boundary: gameState=abi.encode(3) (out of range) falls back to gameData, no revert
+  ok   boundary: gameState=0x02 (1 byte) falls back to gameData
+  ok   boundary: gameState=0x (empty) falls back to gameData
+  ok   boundary: gameState of 64 bytes falls back to gameData
+  ok   boundary: the COMMITTED rule wins over gameData for every rule 0..2
+  ok   boundary: an invalid rule in gameData REVERTS onSessionStart
+
+13 passed (EVM)
+
+$ npm run check
+
+> lifeboat@1.0.0 check
+> node scripts/check.mjs
+
+  ok   game/model.mjs
+  ok   scripts/build.mjs
+  ok   scripts/check.mjs
+  ok   scripts/serve.mjs
+  ok   src/app.js
+  ok   src/sdk/guest.mjs
+  ok   src/selection.mjs
+  ok   tests/contract.test.mjs
+  ok   tests/evm.test.mjs
+  ok   tests/model.test.mjs
+  ok   tests/selection.test.mjs
+  ok   tests/ui.test.mjs
+  ok   tools/browser-verify.mjs
+  ok   tools/tune.mjs
+
+14/14 JS files parse
+
+================================================================================
+RUN 2026-09-27 — WAVE 2A BUILD-COMPLETION.  SUPERSEDED BY SECTION 0 ABOVE.
+
+The counts inside this run are its own and are preserved exactly as recorded.
+================================================================================
 
 ================================================================================
 1. IDENTITY — the model and the bridge are byte-identical to the verified sources

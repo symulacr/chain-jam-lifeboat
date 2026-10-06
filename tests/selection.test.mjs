@@ -15,7 +15,8 @@
  * them, and never terminating. The selection now takes a SET of already-shown keys.
  */
 import assert from 'node:assert/strict';
-import { isSettledRow, keyOf, pickSettledRow, words } from '../src/selection.mjs';
+import { RULES, tableFor } from '../game/model.mjs';
+import { isSettledRow, keyOf, pickSettledRow, sessionIdOf, words } from '../src/selection.mjs';
 
 let pass = 0;
 const test = (name, fn) => {
@@ -181,6 +182,68 @@ test('a single-key caller is REJECTED (cannot silently reintroduce the loop bug)
 test('an array of keys is accepted', () => {
   assert.equal(pickSettledRow([row('a', gs(0, 1, 1, 0n))], null, ['a']), null);
   assert.equal(pickSettledRow([row('a', gs(0, 1, 1, 0n))], null, []).key, 'a');
+});
+
+// ---------------------------------------------------------------- Wave 2: hostile feeds
+// The three tests below are the hostile/malformed-host boundary. Each one had to fail against the
+// pre-fix code, which is why they assert on what the PAGE does with a bad row, not on `words()`.
+
+test('A: a non-hex gameState is contained to its own row — valid rows still render', () => {
+  // words() called BigInt() unguarded, so the SyntaxError was raised INSIDE pickSettledRow's
+  // .filter() and escaped into pollSnapshot with `busy` latched: one bad row blanked the whole feed
+  // and only a reload recovered. Decoding must be total — null for anything undecodable.
+  const nonHex = '0x' + 'zz'.repeat(128);
+  assert.equal(words(nonHex), null, 'words() must return null for an undecodable blob, not throw');
+  assert.equal(isSettledRow(row('bad', nonHex)), false);
+  const halfHex = '0x' + w(1) + 'gg'.repeat(32) + w(3) + w(4);
+  assert.equal(isSettledRow(row('half', halfHex)), false, 'a half-hex word is equally undecodable');
+
+  const feed = [row('bad', nonHex), row('good', gs(1, 7, 7, 0n))];
+  const p = pickSettledRow(feed, null, fresh());
+  assert.equal(p.key, 'good', 'a valid row beside a malformed one must still render');
+  assert.equal(p.parsed.rule, 1);
+  // and the feed keeps moving: the malformed row must not wedge the NEXT snapshot either
+  assert.equal(pickSettledRow(feed, null, shown('good')), null);
+  const feed2 = [row('bad', nonHex), row('good', gs(1, 7, 7, 0n)), row('next', gs(0, 5, 5, 0n))];
+  assert.equal(pickSettledRow(feed2, null, shown('good')).key, 'next');
+});
+
+test('B: a settled row encoding a rule outside RULES is not renderable', () => {
+  // WHY this is a wedge and not a cosmetic mismatch: app.js hands parsed.rule straight to
+  // evolution() -> tableFor(), which throws on an unknown id, AFTER it has latched busy = true.
+  // Every interaction gate then returns early (selectRule/onDemo/onBet/poll), so the page is dead
+  // until reload. The contract only writes RULES[].id, so anything else is a malformed host.
+  assert.throws(() => tableFor(RULES.length), /unknown rule/, 'the model really does throw on a bad rule');
+  const oor = (rule, k) => row(k, gs(rule, 0xaaa, 7, 0n));
+  for (const rule of [RULES.length, RULES.length + 1, 9, 255]) {
+    assert.equal(isSettledRow(oor(rule, 'oor')), false, `rule ${rule} is outside the model and must be rejected`);
+  }
+  // a hostile NEWEST row (the feed is newest-first) must not shadow the round the page owes the player
+  const p = pickSettledRow([oor(9, 'oor9'), row('good', gs(2, 3, 8, 0n))], null, fresh());
+  assert.equal(p.key, 'good');
+  assert.equal(p.parsed.rule, 2);
+  assert.equal(pickSettledRow([oor(9, 'oor9'), oor(10, 'oor10')], null, fresh()), null,
+    'a feed of nothing but out-of-range rules renders nothing rather than throwing');
+  for (const r of RULES) {
+    assert.equal(isSettledRow(row('r' + r.id, gs(r.id, 1, 1, 0n))), true, `rule ${r.id} must stay renderable`);
+  }
+});
+
+test('C: the picked row carries the host reveal id next to the feed key', () => {
+  // keyOf (feed identity, sessionKey-first) and app.js's revealOutcome(sessionId) used to be derived
+  // in two files from two different fields, so they could disagree. selection.mjs now owns both and
+  // hands them to the caller together; the reveal id is never invented from the key, because
+  // reporting a round against the wrong session id is worse than reporting none.
+  const r = { sessionKey: 'K', sessionId: 7, raw: { gameState: gs(1, 7, 7, 0n) } };
+  const p = pickSettledRow([r], null, fresh());
+  assert.equal(p.key, 'K');
+  assert.equal(p.sessionId, 7, 'app.js must read the picked id, not row.sessionId, to stay in step');
+  assert.equal(sessionIdOf(r), 7);
+  assert.equal(sessionIdOf({ sessionKey: 'K' }), null, 'no session id means no revealOutcome call');
+  assert.equal(sessionIdOf(null), null);
+  const keyOnly = pickSettledRow([{ sessionKey: 'K2', raw: { gameState: gs(0, 1, 1, 0n) } }], null, fresh());
+  assert.equal(keyOnly.key, 'K2', 'a key-only row is still renderable');
+  assert.equal(keyOnly.sessionId, null);
 });
 
 console.log(`\n${pass} passed`);

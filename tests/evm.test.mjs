@@ -13,8 +13,9 @@
  * three rules, asserting the committed rule round-trips and the census the contract returns equals
  * the model's census under the SELECTED rule (not the default rule).
  *
- * It needs `solc`, `anvil` and `cast` on PATH. When they are absent it SKIPS cleanly (exit 0) so
- * `npm test` still passes in a toolchain-less environment.
+ * It REQUIRES `solc`, `anvil` and `cast` on PATH. When any is absent this file FAILS with a
+ * non-zero exit rather than skipping: a green run that never deployed the contract is
+ * indistinguishable from a real one, which is exactly the property this file exists to destroy.
  *
  * Scratch only: a private anvil on a non-harness port. No file under the repo is written. The
  * deploy key is read from anvil's OWN startup output (its well-known development accounts), so no
@@ -37,11 +38,23 @@ const CTX_SIG = '(uint256,address,address,uint256,uint256,uint256,uint32,bytes,b
 // board 3: rule 0 -> 0 survivors, rule 2 -> 8 (the F1 reproducer). The board sits in the top 4 bytes.
 const WORD = '0x0000000300000000000000000000000000000000000000000000000000000000';
 
-const have = (bin) => { const r = spawnSync(bin, ['--version'], { encoding: 'utf8' }); return !r.error; };
-if (!have('solc') || !have('anvil') || !have('cast')) {
-  console.log('lifeboat EVM test');
-  console.log('  [info] solc/anvil/cast not all on PATH — SKIP (the JS parity test still ran)');
-  process.exit(0);
+// The toolchain gate FAILS, it never skips. This file compiles the shipped contract, deploys it and
+// settles real rounds; if it does not run then the money path was not exercised, and reporting that
+// as a pass is the defect (it hid a green CI run of nothing). Each missing binary is named with the
+// one command that installs it so the failure is actionable on the machine it happens on.
+const INSTALL_HINT = {
+  solc: 'npm install -g solc@0.8.34   (or https://docs.soliditylang.org/en/latest/installing-solidity.html)',
+  anvil: 'curl -L https://foundry.paradigm.xyz | bash && foundryup   (adds ~/.foundry/bin to PATH)',
+  cast: 'same Foundry install as anvil — cast ships in the same tarball',
+};
+const missing = ['solc', 'anvil', 'cast'].filter((b) => spawnSync(b, ['--version'], { encoding: 'utf8' }).error);
+if (missing.length) {
+  console.error('lifeboat EVM test — TOOLCHAIN MISSING');
+  console.error('  This suite is REQUIRED: it compiles contracts/LifeboatGame.sol, deploys it to an');
+  console.error('  anvil and settles real rounds. Without it the money path never executed, so this');
+  console.error('  run is a failure, not a skip.');
+  for (const b of missing) console.error(`  missing: ${b}\n    install: ${INSTALL_HINT[b]}`);
+  process.exit(1);
 }
 
 let pass = 0;

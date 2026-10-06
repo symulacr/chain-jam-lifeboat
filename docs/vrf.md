@@ -49,11 +49,23 @@ The rule cannot be changed after the word is drawn because of where each handler
 2. `onSessionStart` reads it with `_ruleFrom(ctx.gameData)` and returns
    `newGameState = abi.encode(rule)`. This runs before the VRF request; `requestRandomnessNow = true`
    is returned from the same call.
-3. `onRandomness` reads the rule with `_ruleFrom(ctx.gameState)` — the contract-written state the
-   casino persists — **never** from `ctx.gameData`.
+3. `onRandomness` reads the rule with `_committedRule(ctx)`
+   (`contracts/LifeboatGame.sol:76-83`), which `abi.decode`s the 32-byte committed word from
+   `ctx.gameState` — the contract-written state the casino persists. It must NOT be `_ruleFrom`
+   here: `onSessionStart` writes a full big-endian word whose byte 0 is always `0x00`, and
+   `_ruleFrom` reads `gameData[0]` as the rule (see the F1 note in §The round sampler below).
+4. `_committedRule` falls back to `_ruleFrom(ctx.gameData)` when `gameState` carries no usable
+   committed rule — empty, not 32 bytes, or out of range. That is the case of a context that never
+   passed through `onSessionStart`, and it exists so verified behaviour cannot regress: `gameData`
+   then carries exactly the hint `onSessionStart` would have committed.
 
-So even if a host resubmitted a different `gameData`, the settling step would ignore it.
-`tests/contract.test.mjs` asserts that `onRandomness` contains no `gameData` reference.
+So even if a host resubmitted a different `gameData` *after* a valid session started, the settling
+step ignores it — the committed word is the authority. `tests/evm.test.mjs` asserts that direction
+on a deployed contract for all three rules, and four boundary cases where the fallback *does* fire.
+**No test asserts that `onRandomness` contains no `gameData` reference, and none should**: the
+fallback is deliberate, and the one negative regex in `tests/contract.test.mjs` (`:96-100`) runs
+against the whole file, forbidding the `uint8(gameState[0])` reader that caused F1.
+
 **Residual trust assumption**: the host persists `newGameState` and hands it back unchanged. This is
 the same assumption the reference `FloodGame` makes. A live local-simulator settlement did run in
 Wave 3 (20 rounds), but every probe round used the default rule, so the assumption is only exercised

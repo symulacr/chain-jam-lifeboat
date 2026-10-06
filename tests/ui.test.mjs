@@ -20,13 +20,19 @@
  *   L5  a demo must not say "Paid Nx" beside a zero payout.
  *   L6  nothing may auto-play a round on boot before the first-run instruction can be read.
  *
+ * L7 is the exception to the "reads files as strings" rule below: src/app.js is a page module
+ * (it runs boot() on import and paints into a live DOM), so L7 loads it against a minimal stub
+ * DOM and drives its real render path. The rest of this file cannot catch a wrong win/lose gate;
+ * L7 can, and did.
+ *
  * The browser-level counterparts (computed styles, elementFromPoint sweep, real clicks)
  * live in tools/browser-verify.mjs.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bandOf } from '../game/model.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
@@ -39,6 +45,18 @@ let pass = 0;
 const test = (name, fn) => {
   try {
     fn();
+    pass++;
+    console.log(`  ok   ${name}`);
+  } catch (err) {
+    console.log(`  FAIL ${name}: ${err.message}`);
+    process.exitCode = 1;
+  }
+};
+
+/** Async sibling of `test`: loading src/app.js is a dynamic import, so it cannot be synchronous. */
+const testAsync = async (name, fn) => {
+  try {
+    await fn();
     pass++;
     console.log(`  ok   ${name}`);
   } catch (err) {
@@ -161,6 +179,120 @@ test('L6: no round auto-plays on boot before the user acts', () => {
   assert.doesNotMatch(start[1], /reveal\(/, 'startStandalone must not deal a round automatically');
   assert.match(app, /function renderIdle\(\)/, 'there must be an explicit idle first state');
   assert.match(app, /renderIdle\(\);\s*\n\s*setStandaloneUI\(\)/, 'boot must render the idle state up front');
+});
+
+// ---------------------------------------------------------------- L7 (the paying band IS a win)
+// WHAT THIS PROVES: the win/lose class and the headline wording that src/app.js actually emits
+// for a given census. The gate, the paytable lookup and the text all come from the shipped module —
+// nothing here re-implements them, and the expected class is derived from the model's own bandOf,
+// so a paytable change moves both sides together instead of pinning a stale literal.
+// WHAT IT DOES NOT PROVE: anything visual. `headline win` / `headline lose` are read as strings;
+// whether they differ on screen is still only checked by grepping src/styles.css above, and
+// layout/geometry stays in tools/browser-verify.mjs. The stub DOM records what was written, nothing
+// more. Getting here at all is the point: the L1..L6 guards are regexes over source text and are
+// structurally unable to fail on a gate that is *behaviourally* wrong.
+class StubEl {
+  constructor(tag) {
+    this.tagName = String(tag).toUpperCase();
+    this.children = [];
+    this.dataset = {};
+    this.attrs = new Map();
+    this.listeners = new Map();
+    this.className = '';
+    this.textContent = '';
+    this.innerHTML = '';
+    this.value = '';
+    this.disabled = false;
+    this.tabIndex = -1;
+    this.title = '';
+    const on = new Set();
+    this.classList = {
+      on,
+      toggle: (name, force) => {
+        const want = force === undefined ? !on.has(name) : force;
+        if (want) on.add(name); else on.delete(name);
+      },
+    };
+  }
+  setAttribute(k, v) { this.attrs.set(k, String(v)); }
+  removeAttribute(k) { this.attrs.delete(k); }
+  appendChild(c) { this.children.push(c); return c; }
+  addEventListener(type, fn) {
+    const l = this.listeners.get(type) || [];
+    l.push(fn);
+    this.listeners.set(type, l);
+  }
+  removeEventListener(type) { this.listeners.delete(type); }
+  // index.html ships #pay as table > tbody > tr; app.js reaches the tbody with querySelector and
+  // the rows with querySelectorAll('tbody tr'), so the stub has to answer both or markPaytable dies.
+  querySelector(sel) {
+    if (sel === 'tbody') {
+      if (!this.tbody) this.tbody = new StubEl('tbody');
+      return this.tbody;
+    }
+    return null;
+  }
+  querySelectorAll(sel) {
+    if (sel === 'tbody tr' && this.tbody) return this.tbody.children.slice();
+    return [];
+  }
+}
+
+/** Install just enough DOM/window for src/app.js to evaluate; returns the #headline element. */
+function stubDom() {
+  const byId = new Map();
+  const document = {
+    referrer: '',
+    getElementById(id) {
+      if (!byId.has(id)) byId.set(id, new StubEl('div'));
+      return byId.get(id);
+    },
+    createElement: tag => new StubEl(tag),
+  };
+  // boot() calls connectGameToHost inside a try/catch and never awaits it, so penpal reaching for
+  // window.parent is survivable; the boot timer then settles the page to its standalone idle state.
+  const window = {
+    origin: 'http://localhost',
+    parent: { postMessage() {} },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  globalThis.document = document;
+  globalThis.window = window;
+  return document.getElementById('headline');
+}
+
+await testAsync('L7: a census that PAYS renders as a win, including the 6 and 7 bands', async () => {
+  const headline = stubDom();
+  const { paintHeadline } = await import(pathToFileURL(path.join(root, 'src/app.js')).href);
+  assert.equal(typeof paintHeadline, 'function', 'src/app.js must export paintHeadline to be testable');
+
+  // The two censuses that were broken: both sit in the 1.2x band, and both used to be told the
+  // colony was lost. Asserted by name as well as by class so a future band change is a visible
+  // edit here rather than a silently-passing test.
+  for (const pop of [6, 7]) {
+    paintHeadline(pop);
+    assert.equal(bandOf(pop), 1.2, `census ${pop} is expected to sit in the 1.2x band`);
+    assert.equal(headline.className, 'headline win',
+      `census ${pop} pays ${bandOf(pop)}x, so it must not render as a loss`);
+    assert.match(headline.textContent, /1\.2x/,
+      `census ${pop} must name the band it actually pays`);
+    assert.doesNotMatch(headline.textContent, /The colony is lost/,
+      `census ${pop} is a paying round, so the headline must not call it a loss`);
+  }
+
+  // The rest of the paytable, checked against the model's own bands rather than fixed literals, so
+  // the invariant ("styled by payout") is what is asserted: 5 is the top of the 0x band and must
+  // still read as a loss, and the two bands above must stay wins.
+  for (const pop of [0, 3, 5, 8, 12, 13, 20]) {
+    paintHeadline(pop);
+    const want = bandOf(pop) > 0 ? 'headline win' : 'headline lose';
+    assert.equal(headline.className, want,
+      `census ${pop} pays ${bandOf(pop)}x; the headline class must follow the payout, not a threshold`);
+    if (bandOf(pop) === 0) {
+      assert.match(headline.textContent, /The colony is lost/, `census ${pop} is a true 0x loss`);
+    }
+  }
 });
 
 console.log(`\n${pass} passed${process.exitCode ? ', SOME FAILED' : ''}`);

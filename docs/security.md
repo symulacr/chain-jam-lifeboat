@@ -62,12 +62,26 @@ UNPROVEN live.
 ## The rule lock — the correct pattern
 
 `onSessionStart` reads the rule from `ctx.gameData` and commits `newGameState = abi.encode(rule)`
-*before* the VRF request; `onRandomness` reads the rule back from `ctx.gameState`, never from
-`ctx.gameData`. A host that replayed a session with mutated `gameData` could not change the outcome
-after the word exists. The Wave-7 audit (§3.9 S2) singles this out as the correct pattern and
-contrasts it with `HandicapGame.sol:171`, which reads its committed pick from `gameData`.
-`tests/contract.test.mjs` asserts both directions and that `onRandomness` contains no `gameData`
-reference. Residual trust: the host must persist and return `newGameState` unchanged — the same
+*before* the VRF request; `onRandomness` reads it back through `_committedRule(ctx)`
+(`contracts/LifeboatGame.sol:76-83`), which decodes the committed 32-byte word. A host that replayed
+a session with mutated `gameData` could not change the outcome after the word exists. The Wave-7 audit
+(§3.9 S2) singles this out as the correct pattern; `HandicapGame.sol` was the contrast case until its
+own `_committedPick` landed (`contracts/HandicapGame.sol:136-143`, called at `:202`), and the two now
+read their committed value the same way.
+
+**`gameData` is a deliberate fallback, not a hole.** `_committedRule` returns
+`_ruleFrom(ctx.gameData)` whenever `gameState` is absent, not 32 bytes, or decodes to a rule outside
+`0..RULES` — i.e. a context that never passed through `onSessionStart`, or one whose host returned no
+state. Under the host lifecycle the two always agree, because `onSessionStart` commits the very same
+`pick` it read out of `gameData`, so the fallback is the candidate's original behaviour and verified
+behaviour cannot regress. Six `tests/evm.test.mjs` boundary assertions cover exactly this: a 1-byte,
+an empty, a 64-byte and an out-of-range `gameState` all fall back, and the committed rule beats a
+contradicting `gameData` for every rule 0..2. **No test asserts the absence of the fallback**, and
+none should — the fallback is intended, and the negative regex in `tests/contract.test.mjs:96-100`
+runs against the whole file (it forbids the F1 `uint8(gameState[0])` reader), not against the
+`onRandomness` body.
+
+Residual trust: the host must persist and return `newGameState` unchanged — the same
 assumption the reference `FloodGame` makes, not observable without a live settlement.
 
 ## Overflow / rounding

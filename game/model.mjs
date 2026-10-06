@@ -126,15 +126,28 @@ export function census(board, ruleId) {
   return population(b);
 }
 
-/** The 20-bit board a word deals. */
+// The fold below reads raw char codes, so the charset has to be known rather than assumed: a
+// charCodeAt past the end of the string is NaN, (NaN | 32) - 87 is -55, and that negative digit
+// folded into the lane accumulator to produce a plausible-looking board for a word the contract
+// never dealt. 255 is the "not a hex digit" sentinel; upper-case is accepted because a word
+// round-tripped through a cast/RPC hex dump can arrive capitalised.
+const HEX = new Uint8Array(256).fill(255);
+for (let i = 0; i < 10; i++) HEX[48 + i] = i;
+for (let i = 0; i < 6; i++) HEX[97 + i] = 10 + i;
+for (let i = 0; i < 6; i++) HEX[65 + i] = 10 + i;
+
+/** The 20-bit board a word deals. One VRF word is exactly a bytes32, so the shape is not negotiable. */
 export function wordTo20(word) {
-  const s = String(word);
+  if (typeof word !== 'string' || !word.startsWith('0x') || word.length !== 66) {
+    throw new Error(`wordTo20(): expected a 0x-prefixed 32-byte hex word (66 chars), got ${
+      typeof word === 'string' ? word.length + ' chars' : typeof word}`);
+  }
   let x = 0;
   for (let lane = 0; lane < 4; lane++) {
     let v = 0;
     for (let i = 0; i < 8; i++) {
-      const c = s.charCodeAt(2 + lane * 8 + i);
-      const d = c <= 57 ? c - 48 : (c | 32) - 87;
+      const d = HEX[word.charCodeAt(2 + lane * 8 + i)];
+      if (d === 255) throw new Error(`wordTo20(): non-hex character in word: ${word}`);
       v = (v * 16 + d) >>> 0;
     }
     x = (x ^ v) >>> 0;

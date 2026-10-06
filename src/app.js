@@ -172,27 +172,38 @@ function updateRuleChips() {
   }
 }
 
-function paintHeadline() {
+// Exported, and it takes the census rather than reading the module-level `stat`, for one reason:
+// this is the ONLY place the win/lose styling is decided, so it is the only thing a Node test can
+// drive without a browser. paint() is its single caller and passes the census it just counted.
+export function paintHeadline(pop) {
   const headline = el('headline');
-  const mult = bandOf(stat);
+  const mult = bandOf(pop);
   if (busy) {
     headline.className = 'headline';
     headline.textContent = `Evolving under ${lockedRuleLabel()} \u2014 the census lands on frame ${GENERATIONS}.`;
     return;
   }
-  if (stat >= 8) {
+  // WIN/LOSE IS THE PAYOUT, NOT A CENSUS THRESHOLD. This gate used to read `stat >= 8`, which
+  // contradicted the paytable printed directly above it in the same panel: 6 and 7 survivors are
+  // the 1.2x band, so those rounds were styled "The colony is lost" while the Return cell beside
+  // them read 1.2x. It was not a rounding artefact either — a full 2^20 enumeration puts 20.31%
+  // of all boards in that band, and 42.83% of the boards that pay at all, under the default rule.
+  // `mult` is already computed one line above for this same headline, so keying on it makes the
+  // two cells agree by construction: any band that pays > 0 reads as a win, and only a genuine
+  // 0x band reads as a loss. If the paytable ever grows a new paying band, this follows it.
+  if (mult > 0) {
     headline.className = 'headline win';
     // A demo round stakes nothing, so the headline must NOT say "Paid" while the Result cell
     // reads 0. It names the band and states the demo pays nothing; a hosted round shows the
     // real returned amount, matching the Result cell.
     headline.textContent = isDemoRound
-      ? `Census: ${stat} live berths under ${lockedRuleLabel()}. A real ${mult}x wager would pay; this demo pays nothing.`
-      : `Census: ${stat} live berths under ${lockedRuleLabel()}. Paid ${mult}x \u2014 ${formatAmount(payout, tokenDecimals())} ${tokenSymbol()}.`;
+      ? `Census: ${pop} live berths under ${lockedRuleLabel()}. A real ${mult}x wager would pay; this demo pays nothing.`
+      : `Census: ${pop} live berths under ${lockedRuleLabel()}. Paid ${mult}x \u2014 ${formatAmount(payout, tokenDecimals())} ${tokenSymbol()}.`;
   } else {
     headline.className = 'headline lose';
     headline.textContent = isDemoRound
-      ? `Census: ${stat} live berths under ${lockedRuleLabel()}. The colony is lost \u2014 this demo pays nothing.`
-      : `Census: ${stat} live berths under ${lockedRuleLabel()}. The colony is lost.`;
+      ? `Census: ${pop} live berths under ${lockedRuleLabel()}. The colony is lost \u2014 this demo pays nothing.`
+      : `Census: ${pop} live berths under ${lockedRuleLabel()}. The colony is lost.`;
   }
 }
 const lockedRuleLabel = () => (RULES[lockedRule] || RULES[0]).label;
@@ -207,7 +218,7 @@ function paint(final) {
   el('k-pay-note').textContent = isDemoRound ? 'demo \u2014 no money is paid' : tokenSymbol();
   el('result-title').textContent = isDemoRound ? 'Result (demo)' : 'Result';
   markPaytable(stat);
-  paintHeadline();
+  paintHeadline(stat);
   renderRuleChips();
 }
 
@@ -351,7 +362,12 @@ function pollSnapshot() {
     for (const k of renderedKeys) if (!live.has(k)) renderedKeys.delete(k);
   }
   if (pendingKey !== null && key === pendingKey) pendingKey = null;
-  currentSessionId = row.sessionId ?? null;
+  // The reveal id comes from `picked`, not from `row`, because row selection and the reveal
+  // callback must agree on what identifies a session. `keyOf` prefers `sessionKey` and falls
+  // back to `sessionId`; this line used to read `row.sessionId` directly, so a feed row
+  // carrying `sessionKey` but no `sessionId` — the shape keyOf treats as primary — left
+  // currentSessionId null and the reveal callback silently never fired for that round.
+  currentSessionId = picked.sessionId ?? null;
   // Replay the contract's board through the model's own automaton so the page shows
   // exactly the frames the contract counted, then land on the contract's census.
   const start = parsed.board;

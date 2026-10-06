@@ -250,10 +250,17 @@ test('full-word inputs (all four lanes) agree', () => {
   const words = [
     '0x' + '11'.repeat(32),
     '0x' + 'de'.repeat(32),
-    '0x0123456789abcdef'.repeat(4),
+    // Each entry must be exactly 32 bytes of hex. This was `'0x0123456789abcdef'.repeat(4)`,
+    // which repeats the "0x" prefix too and yields a 72-char string with an 'x' inside the
+    // folded window. wordTo20 used to fold that silently into a plausible-looking wrong board,
+    // and the contract's equivalent folded it the same wrong way, so the two agreed and the
+    // test passed. wordTo20 now validates its input, so the malformed word is refused outright
+    // rather than quietly agreeing with itself; the literal is the thing that was wrong.
+    '0x' + '0123456789abcdef'.repeat(4),
     '0x' + 'ff'.repeat(16) + '00'.repeat(16),
   ];
   for (const word of words) {
+    assert.equal(word.length, 66, `fixture is 32 bytes: ${word}`);
     assert.equal(contractFold20(word), model.wordTo20(word), word);
     assert.equal(contractCensus(contractFold20(word), 0), model.outcome(word).stat, word);
   }

@@ -99,11 +99,14 @@ what its own pixels show — the escrow, the payout and the settlement are contr
 
 Three properties make this checkable by a reader:
 
-1. `onSessionStart` commits the rule to `newGameState`, and `onRandomness` reads it back from
-   `ctx.gameState`. `onRandomness` never reads the rule from `ctx.gameData`, so a host that
-   re-sent a different `gameData` could not change the outcome after the word exists.
-   (`tests/contract.test.mjs` asserts both directions, including that `onRandomness` contains no
-   `gameData` reference.)
+1. `onSessionStart` commits the rule to `newGameState` as `abi.encode(rule)`, and `onRandomness`
+   reads it back through `_committedRule(ctx)`, which `abi.decode`s that committed word out of
+   `ctx.gameState`. A host that re-sent a different `gameData` after the session started could not
+   change the outcome. `_committedRule` does name `_ruleFrom(ctx.gameData)`, but only as a
+   deliberate fallback for a context with no usable committed state (see `security.md`), so the
+   payout cannot regress into the candidate's original behaviour. No test asserts the fallback's
+   absence, because it is intended; `tests/evm.test.mjs` instead pins both directions on a deployed
+   contract.
 2. Every payout routes through one `_multBps`/`_payout` pair, and the reserve committed at start is
    exactly `escrowedStake + reservedProfit - escrowedStake` for the 16x top band; the settling step
    returns `reservedProfitDelta = 0`, so the cap and the payout cannot disagree. A payout can never

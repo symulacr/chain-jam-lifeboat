@@ -199,4 +199,39 @@ test('makeRng does not collide at high round indices', () => {
   }
 });
 
+test('wordTo20 refuses a malformed word instead of folding it into a plausible-looking board', () => {
+  // The fold reads 16 bytes and used to run straight off the end of a shorter string:
+  // charCodeAt past the end is NaN, (NaN | 32) - 87 === -55, and that negative digit went into the
+  // lane accumulator — so a truncated or non-hex word produced a real-looking 20-bit deck that the
+  // contract never dealt. Two words one byte apart, same intent, two different boards:
+  //   '0x' + 'aa'*15  ->  3315
+  //   '0x' + 'aa'*16  ->     0
+  // which is exactly the kind of drift the log<->UI parity work exists to remove. Validation is the
+  // fix; the sibling 02-handicap model throws the same way (`non-hex character in word`).
+  assert.throws(() => wordTo20('0x' + 'aa'.repeat(15)), /wordTo20/,
+    'a 15-byte word must be refused, not folded to 3315');
+  assert.throws(() => wordTo20('0x'), /wordTo20/, 'the empty word is not a board');
+  assert.throws(() => wordTo20('0x' + 'aa'.repeat(32) + '00'), /wordTo20/, '33 bytes is not a bytes32');
+  assert.throws(() => wordTo20('aa'.repeat(32)), /wordTo20/, 'the 0x prefix is part of the word contract');
+  // the non-hex digit has to sit inside the 16 bytes the fold actually reads, which is why a bad
+  // tail byte alone slipped through: characters past the first 32 hex digits are never decoded.
+  assert.throws(() => wordTo20('0x' + 'aa'.repeat(15) + 'zz' + 'aa'.repeat(16)), /non-hex/,
+    'a non-hex digit must be named as such');
+  assert.throws(() => wordTo20('0x' + 'gg'.repeat(32)), /non-hex/);
+  assert.throws(() => wordTo20(null), /wordTo20/);
+  assert.throws(() => wordTo20(123), /wordTo20/);
+  assert.throws(() => wordTo20(0x1234n), /wordTo20/);
+
+  // The fold itself is untouched by the validation, and hex is case-insensitive as everywhere else
+  // in the model (a Chain word can arrive upper-cased from a cast/RPC round-trip).
+  const lanes = ['a1b2c3d4', '12345678', 'deadbeef', '0f0f0f0f']; // the 16 bytes the fold reads
+  const full = '0x' + lanes.join('') + '00'.repeat(16); // ...plus the 16 bytes of word padding
+  assert.equal(wordTo20(full), (0xa1b2c3d4 ^ 0x12345678 ^ 0xdeadbeef ^ 0x0f0f0f0f) & 0xfffff);
+  assert.equal(wordTo20('0x' + lanes.join('').toUpperCase() + '00'.repeat(16)), wordTo20(full));
+  // only the first 16 bytes are folded (the rest of the bytes32 is word padding), which is also
+  // why a bad digit in the tail was never noticed — it is never decoded
+  assert.equal(wordTo20('0x' + lanes.join('') + 'aa'.repeat(16)), wordTo20(full),
+    'the word tail must not move the board');
+});
+
 console.log(`\n${pass} passed${process.exitCode ? ', SOME FAILED' : ''}`);
