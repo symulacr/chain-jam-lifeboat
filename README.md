@@ -39,7 +39,7 @@ contracts/            LifeboatGame.sol (ICasinoGameV2) + ICasinoGameV2.sol
 public/               game.manifest.json, og-image.png, _headers, vercel.json
 tests/                model.test.mjs, contract.test.mjs
 docs/                 architecture, rtp, rtp-proof, vrf, chain-integration, standalone, iframe,
-                      testnet, security, verification.txt, host-embed.json
+                      testnet, security, verification.txt
 scripts/              build.mjs, check.mjs, serve.mjs
 tools/                tune.mjs (exact enumeration), browser-verify.mjs
 dist/                 build output (gitignored)
@@ -129,7 +129,7 @@ this repo builds and tests on its own.
   harness (`vendor/casino-sdk/simulator`): the guest mounted, a wager was placed **through the
   bridge**, and the settled reveal was read from the guest's own DOM (session 61; sessions 20 → 21).
   That is the documented dev environment, **not** the live production chain.wtf host, which stays
-  `EXTERNAL BLOCKED`. See `docs/host-embed.json`, `research/host-embed-report.json`.
+  `EXTERNAL BLOCKED`. See `docs/verification.txt` §8 (the run record) and `research/host-embed-report.json` in the parent monorepo.
 - **`ctx.gameState` round-tripping is only partially observed**: every probe round opened with
   `gameData '0x'` (rule 0), the same default `_ruleFrom('')` returns, so a failed
   non-default-rule round-trip is indistinguishable. Recorded, not hidden.

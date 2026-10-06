@@ -288,7 +288,7 @@ was **left untouched** and is reported here for the owner to fix (swap the two c
   discrepancy. The **byte-size** claim is verified; the **specific compiler version** is `UNTESTED`.
 - **On-chain facts** (deploy tx `0xd238c2…`, block 19, gasUsed 566101, 21 sessions, 21 unique
   fulfilments): cross-checked only for internal consistency across `docs/chain-proof.json`,
-  `docs/host-embed.json`, `docs/verification.txt`; the chain/host was not queried (forbidden). The
+  `docs/verification.txt`; the chain/host was not queried (forbidden). The
   external `research/chain-evidence.json` and `research/host-embed-report.json` were not read.
   `UNTESTED` against the live chain.
 - **Model/bridge byte-identity to `jam-candidates/**`**: the sha256 values match the digests the

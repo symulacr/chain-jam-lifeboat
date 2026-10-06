@@ -138,7 +138,7 @@ and contract; the payout cap identity holds; the rule-lock pattern is present an
 page plays a settled round with no host and renders the model's own census; **the compiled contract
 ran on the local simulator** — deployed, 20 rounds settled with 0 stuck / 0 parity failures, a real
 VRF fulfilment per session, and the max-payout path eth-called within cap (`docs/chain-proof.json`);
-the **local in-host embed** settled through the bridge (`docs/host-embed.json`); the build runs
+the **local in-host embed** settled through the bridge (`docs/verification.txt` §8); the build runs
 **standalone on the public HTTPS URL** (`research/public-deploy-top3.md`).
 
 **Unproven**: the production-chain deployment and the production chain.wtf host (EXTERNAL BLOCKED —

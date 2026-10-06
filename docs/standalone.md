@@ -81,4 +81,4 @@ Source: `research/public-deploy-top3.md`; verbatim probe/browser output in `docs
   the coordinator's run recorded in `research/public-deploy-top3.md`.
 - Production Chain.wtf host embed remains `EXTERNAL BLOCKED`. The local SDK production-faithful
   harness embed **PASSED** (guest mounted, wager placed through the bridge, chain session 20 → 21;
-  see `docs/host-embed.json`), but the production host is not entrant-drivable.
+  see `docs/verification.txt` §8), but the production host is not entrant-drivable.

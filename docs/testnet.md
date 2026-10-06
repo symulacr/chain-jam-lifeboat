@@ -52,7 +52,7 @@ jam's own gate is *"Runs correctly in the local simulator"*.
 | production-chain deployment | **EXTERNAL BLOCKED** (no public testnet path exists for an entrant) |
 | real chain.wtf production host embed | **EXTERNAL BLOCKED** (the production host cannot be driven by an entrant) |
 | local-simulator execution | **PASS** — deployed + settled on chain id 31337: 21 sessions settled, 20 rounds with 0 stuck / 0 parity failures, one real VRF fulfilment tx per session, max-payout eth-call within cap (`docs/chain-proof.json`, `research/chain-evidence.json`) |
-| local in-host embed (SDK production-faithful harness) | **PASS** — guest mounted, wager placed through the bridge, chain session count 20 → 21, guest rendered the settle (`docs/host-embed.json`) |
+| local in-host embed (SDK production-faithful harness) | **PASS** — guest mounted, wager placed through the bridge, chain session count 20 → 21, guest rendered the settle (`docs/verification.txt` §8) |
 | public HTTPS hosting + standalone run | **PASS** — `https://chain-jam-lifeboat.vercel.app`, driven standalone in a real browser (`research/public-deploy-top3.md`) |
 | everything else (RTP, model, build, browser run) | **PASS** with evidence in `docs/verification.txt` |
 
